@@ -47,7 +47,7 @@ object Main extends zio.App {
       command <- CommandParser.parseCommand(args)
       _ <- runCommand(command)
     } yield ())
-      .fold(err => putStrLnErr(err.getMessage), _ => succeed())
+      .fold(err => ZIO(err.printStackTrace()), _ => succeed())
       .flatten
       .exitCode
 }

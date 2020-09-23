@@ -27,11 +27,11 @@ object Main extends zio.App {
   def runCommand(command: AppCommand): Eff[Any] = {
     command match {
       case Server() => ???
-      case exec: Exec ⇒
+      case exec: Exec =>
         CommandParser
           .command(exec)
           .run
-          .map(res ⇒ {
+          .map(res => {
             res.stderr.linesStream.concat(res.stdout.linesStream)
           })
           .flatMap(lines => {
@@ -43,8 +43,9 @@ object Main extends zio.App {
 
   override def run(args: List[String]): URIO[zio.ZEnv, ExitCode] =
     (for {
-      command ← CommandParser.parseCommand(args)
-      _ ← runCommand(command)
+      _ <- Repository.migrate(xa)
+      command <- CommandParser.parseCommand(args)
+      _ <- runCommand(command)
     } yield ())
       .fold(err => putStrLnErr(err.getMessage), _ => succeed())
       .flatten

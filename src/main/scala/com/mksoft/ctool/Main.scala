@@ -1,28 +1,14 @@
 package com.mksoft.ctool
 
-import java.io.File
-
-import zio.ZIO.{fail, succeed, _}
-import zio.console.{Console, putStrLn, putStrLnErr}
-import zio.process.Command
-import zio._
-import zio.blocking.Blocking
-import zio.interop.catz._
-import cats.implicits._
-import cats._
-import Utils._
-import doobie._
-import cats.data._
-import cats.implicits._
-import doobie.implicits._
-import cats.implicits._
 import com.mksoft.ctool.Model._
-import doobie.free.{databasemetadata => DMD}
+import zio.ZIO.succeed
+import zio._
+import zio.console.putStrLn
 
 object Main extends zio.App {
   val xa = Repository.xa()
 
-  val getCommand = Service.getCommand(Repository.getCommandQ(xa))(_)
+  val getCommand = Service.getCommand(Repository.getCommandQ(xa))(_: String)
 
   def runCommand(command: AppCommand): Eff[Any] = {
     command match {
@@ -35,7 +21,7 @@ object Main extends zio.App {
             res.stderr.linesStream.concat(res.stdout.linesStream)
           })
           .flatMap(lines => {
-            lines.foreach(it => putStrLn(it))
+            lines.foreach(putStrLn(_))
           })
       case ExecStored(command) => getCommand(command).flatMap(runCommand)
     }

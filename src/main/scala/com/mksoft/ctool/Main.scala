@@ -8,28 +8,26 @@ import zio.console.putStrLn
 object Main extends zio.App {
   val xa = Repository.xa()
 
-  val getCommand = Service.getCommand(Repository.getCommandQ(xa))(_: String)
+  val getCommand =
+    Service.getStoredCommand(Repository.getCommandQ(xa))(_: String)
 
   def runCommand(command: AppCommand): Eff[Any] = {
     command match {
       case Server() => ???
       case exec: Exec =>
-        CommandParser
-          .command(exec)
-          .run
-          .map(res => {
-            res.stderr.linesStream.concat(res.stdout.linesStream)
-          })
+        Service
+          .execCommand(exec)
           .flatMap(lines => {
             lines.foreach(putStrLn(_))
           })
       case ExecStored(command) => getCommand(command).flatMap(runCommand)
+      case ExecScala(commandName) ⇒ Service.execScalaCommand(commandName)
     }
   }
 
   override def run(args: List[String]): URIO[zio.ZEnv, ExitCode] =
     (for {
-      _ <- Repository.migrate(xa)
+      _ <- RepositorySetup.migrate(xa)
       command <- CommandParser.parseCommand(args)
       _ <- runCommand(command)
     } yield ())

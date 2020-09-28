@@ -15,6 +15,7 @@ case class Server() extends AppCommand
 case class Exec(command: String, dir: String, args: List[String])
     extends AppCommand
 case class ExecStored(command: String) extends AppCommand
+case class ExecScala(commandName: String) extends AppCommand
 
 case class DirectoryE(dir: String, uses: Int)
 case class CommandE(commandString: String, uses: Int)
@@ -32,5 +33,5 @@ case class StoredCommandE(
     commandString: String,
     args: String,
     dir: String,
-    uses: String
+    uses: Int
 )

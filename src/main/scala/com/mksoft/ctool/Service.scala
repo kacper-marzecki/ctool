@@ -1,5 +1,7 @@
 package com.mksoft.ctool
 
+import java.sql.Timestamp
+
 import com.mksoft.ctool.Model.Eff
 import com.mksoft.ctool.Utils.ex
 import zio._
@@ -9,8 +11,37 @@ import zio.blocking.Blocking
 import zio.console._
 import zio.process.CommandError
 import zio.stream.ZStream
+import cats.data._, cats.implicits._
 
 object Service {
+  def persistUse(
+      persistCommand: String ⇒ Eff[Unit],
+      persistDir: String ⇒ Eff[Unit],
+      persistArgs: (String, List[String]) ⇒ Eff[Unit],
+      incrementCommandUse: String ⇒ Eff[Unit],
+      incrementDirUse: String ⇒ Eff[Unit],
+      incrementArgsUse: (String, List[String]) ⇒ Eff[Unit],
+      persistCommandExecution: (CommandExecutionE) ⇒ Eff[Unit],
+      getCurrentTime: Eff[Timestamp]
+  )(exec: Exec): Eff[Unit] = {
+    persistCommand(exec.command) *>
+      persistDir(exec.dir) *>
+      persistArgs(exec.command, exec.args) *>
+      incrementCommandUse(exec.command) *>
+      incrementDirUse(exec.dir) *>
+      incrementArgsUse(exec.command, exec.args) *>
+      (for {
+        timestamp ← getCurrentTime
+        _ ← persistCommandExecution(
+          CommandExecutionE(
+            commandString = exec.command,
+            dir = exec.dir,
+            args = exec.args.intercalate(";;;"),
+            time = timestamp
+          )
+        )
+      } yield ())
+  }
 
   def execScalaCommand(commandName: String): Eff[Any] = {
     commandName match {
@@ -18,15 +49,21 @@ object Service {
     }
   }
 
-  def execCommand(
+  def execCommand(persistUse: (Exec) ⇒ Eff[Unit])(
       exec: Exec
-  ): ZIO[Blocking, CommandError, ZStream[Blocking, CommandError, String]] =
-    CommandParser
+  ) = {
+    val command = CommandParser
       .command(exec)
       .run
-      .map(res => {
-        res.stderr.linesStream.concat(res.stdout.linesStream)
-      })
+      .bimap(
+        _.getCause,
+        { res ⇒ res.stderr.linesStream.concat(res.stdout.linesStream) }
+      )
+    for {
+      stream ← command
+      _ ← persistUse(exec)
+    } yield stream
+  }
 
   def getStoredCommand(
       getById: (String) => Eff[Option[StoredCommandE]]

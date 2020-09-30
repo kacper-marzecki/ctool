@@ -21,14 +21,16 @@ CREATE TABLE stored_command
 create table directory
 (
     dir  varchar(1000) not null,
-    uses int           not null default 0
+    uses int           not null default 0,
+    unique (dir)
 );
 --migration_end
 --migration_start
 create table command
 (
     command_string varchar(1000) not null,
-    uses           int           not null default 0
+    uses           int           not null default 0,
+    unique (command_string)
 );
 --migration_end
 --migration_start
@@ -36,6 +38,7 @@ create table command_arg
 (
     command_string varchar(1000) not null,
     arg            varchar(1000) not null,
-    uses           int           not null default 0
+    uses           int           not null default 0,
+    unique (command_string, arg)
 );
 --migration_end

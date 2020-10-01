@@ -2,7 +2,7 @@ package com.mksoft.ctool
 
 import java.sql.Timestamp
 
-import com.mksoft.ctool.Model.Eff
+import com.mksoft.ctool.Model.{CommandLineStream, Eff}
 import com.mksoft.ctool.Utils.ex
 import zio._
 import zio.interop.catz._
@@ -11,7 +11,8 @@ import zio.blocking.Blocking
 import zio.console._
 import zio.process.CommandError
 import zio.stream.ZStream
-import cats.data._, cats.implicits._
+import cats.data._
+import cats.implicits._
 
 object Service {
   def persistUse(
@@ -49,9 +50,21 @@ object Service {
     }
   }
 
-  def execCommand(persistUse: (Exec) ⇒ Eff[Unit])(
+  def executeCommand(
+      executeExec: (Exec) ⇒ Eff[CommandLineStream],
+      getStoredCommand: (String) ⇒ Eff[StoredCommandE],
+      incrementStoredCommandUse: (String) ⇒ Eff[Unit]
+  )(commandName: String) = {
+    for {
+      stored ← getStoredCommand(commandName)
+      stream ← executeExec(toExec(stored))
+      _ ← incrementStoredCommandUse(commandName)
+    } yield stream
+  }
+
+  def executeExec(persistUse: (Exec) ⇒ Eff[Unit])(
       exec: Exec
-  ) = {
+  ): Eff[CommandLineStream] = {
     val command = CommandParser
       .command(exec)
       .run
@@ -71,8 +84,10 @@ object Service {
     getById(id)
       .flatMap(
         fromOption(_)
-          .orElseFail(ex("Cannot Find Command"))
+          .orElseFail(ex(s"Cannot Find Command with id: $id"))
       )
-      .map(s ⇒ Exec(s.commandString, s.dir, s.args.split(";;;").toList))
   }
+
+  def toExec(s: StoredCommandE) =
+    Exec(s.commandString, s.dir, s.args.split(";;;").toList)
 }

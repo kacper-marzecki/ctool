@@ -3,10 +3,14 @@ package com.mksoft.ctool
 import java.sql.Timestamp
 
 import zio._
+import zio.blocking.Blocking
+import zio.process.CommandError
+import zio.stream.ZStream
 
 object Model {
   type Result[+L, +R] = ZIO[ZEnv, L, R]
   type Eff[+A] = Result[Throwable, A]
+  type CommandLineStream = ZStream[Blocking, CommandError, String]
 }
 
 abstract sealed class AppCommand;

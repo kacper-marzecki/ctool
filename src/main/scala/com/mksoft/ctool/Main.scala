@@ -10,6 +10,7 @@ import zio.console.putStrLn
 
 object Main extends zio.App {
   val xa = Repository.xa()
+
   val getCurrentTime: Eff[Timestamp] = ZIO(
     java.sql.Timestamp.valueOf(LocalDateTime.now())
   )
@@ -28,19 +29,26 @@ object Main extends zio.App {
     getCurrentTime = getCurrentTime
   )(_)
 
-  val execCommand = Service.execCommand(persistUse)(_)
+  val executeExec = Service.executeExec(persistUse)(_)
+
+  val executeCommand = Service.executeCommand(
+    executeExec,
+    getCommand,
+    Repository.incrementStoredCommandUseQ(xa)(_)
+  )(_)
 
   def runCommand(command: AppCommand): Eff[Any] = {
     command match {
       case Server() => ???
       case exec: Exec =>
-        execCommand(exec)
+        executeExec(exec)
           .flatMap(lines => {
             lines.foreach(putStrLn(_))
           })
       case ExecStored(command) =>
-        getCommand(command).flatMap(runCommand) *> Repository
-          .incrementStoredCommandUseQ(xa)(command)
+        executeCommand(command).flatMap(lines => {
+          lines.foreach(putStrLn(_))
+        })
       case ExecScala(commandName) ⇒ Service.execScalaCommand(commandName)
     }
   }

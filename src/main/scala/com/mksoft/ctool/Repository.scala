@@ -87,7 +87,6 @@ object Repository {
         inArgs,
         withCommandString
       )
-    println(query.update.sql)
     query.update.run
       .transact(xa)
       .map(ignore)

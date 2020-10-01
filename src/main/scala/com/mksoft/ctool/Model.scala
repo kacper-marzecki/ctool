@@ -15,7 +15,7 @@ object Model {
 
 abstract sealed class AppCommand;
 
-case class Server() extends AppCommand
+case class StartServer() extends AppCommand
 case class Exec(command: String, dir: String, args: List[String])
     extends AppCommand
 case class ExecStored(command: String) extends AppCommand

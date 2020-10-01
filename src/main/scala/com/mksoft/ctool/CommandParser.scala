@@ -28,7 +28,7 @@ object CommandParser {
 
   def parseCommand(args: List[String]): Eff[AppCommand] = {
     args match {
-      case "server" :: Nil      => succeed(Server())
+      case "server" :: Nil      => succeed(StartServer())
       case "raw" :: subCommands => parseExec(subCommands)
       case "exec" :: procedureName :: Nil =>
         succeed(ExecStored(procedureName))

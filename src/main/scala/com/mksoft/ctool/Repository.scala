@@ -16,10 +16,10 @@ import doobie.implicits.javasql._
 import doobie.implicits.javatime._
 
 object Repository {
-  implicit val storedCommandPut: Read[StoredCommandE] =
-    Read[(String, String, String, String, Int)].map {
-      case (a, b, c, d, e) ⇒ StoredCommandE(a, b, c, d, e)
-    }
+//  implicit val storedCommandPut: Read[StoredCommandE] =
+//    Read[(String, String, String, String, Int)].map {
+//      case (a, b, c, d, e) ⇒ StoredCommandE(a, b, c, d, e)
+//    }
   def xa() =
     Transactor.fromDriverManager[Eff](
       "org.sqlite.JDBC",

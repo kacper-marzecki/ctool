@@ -25,7 +25,7 @@ mainClass := Some("com.mksoft.ctool.Main")
 
 // Want to use a published library in your project?
 // You can define other libraries as dependencies in your build like this:
-
+fork := true
 //libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2"
 libraryDependencies ++= Seq(
   "org.typelevel" %% "cats-core" % "2.1.1",

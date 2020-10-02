@@ -23,18 +23,21 @@ object Server {
       }
     }
 
-  def run(root: CompositionRoot): Eff[Http.HttpTerminated] = {
+  def run(root: CompositionRoot): Eff[Nothing] = {
     ZIO
       .effect({
         implicit val system = ActorSystem(Behaviors.empty, "ctool-system")
         ZIO
           .fromFuture(_ ⇒
+            // TODO parameterize port binding
             Http()(system).newServerAt("localhost", 8080).bind(routes(root))
           )
-          .flatMap(b ⇒ ZIO.fromFuture(_ ⇒ b.whenTerminated))
+          .flatMap(portBinding ⇒
+            ZIO.never.onInterrupt(
+              ZIO.fromFuture(_ ⇒ portBinding.unbind()).ignore
+            )
+          )
       })
       .flatten
-    // TODO parameterize port binding
-
   }
 }

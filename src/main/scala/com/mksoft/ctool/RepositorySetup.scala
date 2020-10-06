@@ -12,8 +12,8 @@ import cats.data._, cats.implicits._
 
 object RepositorySetup {
   def readMigrations = {
-    val read = ZIO(Source.fromResource("migrations.sql"))
-    val close = (s: BufferedSource) ⇒ ZIO.succeed(s.close())
+    val read           = ZIO(Source.fromResource("migrations.sql"))
+    val close          = (s: BufferedSource) ⇒ ZIO.succeed(s.close())
     val migrationsFile = ZIO.bracket(read)(close)
     migrationsFile(file ⇒ { UIO(parseMigrations(file.getLines().toList)) })
   }
@@ -31,29 +31,28 @@ object RepositorySetup {
 
   def migrate(xa: Transactor[Eff]) = {
     for {
-      currentSchemaVersion <- getCurrentVersionOrCreateTable.transact(xa)
-      migrations ← readMigrations
+      currentSchemaVersion ← getCurrentVersionOrCreateTable.transact(xa)
+      migrations           ← readMigrations
       migrationsToRun =
         migrations.slice(currentSchemaVersion + 1, migrations.length)
       _ ←
         if (migrationsToRun.isEmpty) putStrLn("No migrations to run")
-        else putStrLn(s"Migrating db from version $currentSchemaVersion ")
-      _ ← ZIO.foreach_(migrationsToRun.mapWithIndex(Tuple2.apply)) {
-        (migWithId) =>
-          {
-            val (mig, idx) = migWithId
-            val migration = for {
-              _ <-
-                if (currentSchemaVersion < idx)
-                  setVersionQ(idx)
-                    .flatMap(_ ⇒ Fragment.const(mig).update.run)
-                    .flatMap(_ ⇒ ().pure[ConnectionIO])
-                else ().pure[ConnectionIO]
-            } yield mig
-            migration.transact(xa) *> zio.console.putStrLn(
-              s"migration run ${mig}"
-            )
-          }
+        else putStrLn(s"Migrating db from version $currentSchemaVersion")
+      _ ← foreach_(migrationsToRun.mapWithIndex(Tuple2.apply)) { migWithId =>
+        {
+          val (mig, idx) = migWithId
+          val migration = for {
+            _ <-
+              if (currentSchemaVersion < idx)
+                setVersionQ(idx)
+                  .flatMap(_ ⇒ Fragment.const(mig).update.run)
+                  .flatMap(_ ⇒ ().pure[ConnectionIO])
+              else ().pure[ConnectionIO]
+          } yield mig
+          migration.transact(xa) *> zio.console.putStrLn(
+            s"Migration run ${mig}"
+          )
+        }
       }
     } yield ()
   }
@@ -68,7 +67,7 @@ object RepositorySetup {
       }
       .flatMap {
         case Some(ver) ⇒ ver.pure[ConnectionIO]
-        case None ⇒ setVersionQ(-1).as(-1)
+        case None      ⇒ setVersionQ(-1).as(-1)
       }
 
   val createSchemaVersionTableQ =

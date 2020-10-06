@@ -17,14 +17,14 @@ object Main extends zio.App {
 
   def runCommand(command: AppCommand): Eff[Any] = {
     command match {
-      case StartServer() => Server.run(root)
-      case exec: Exec =>
+      case StartServer()         => Server.run(root)
+      case exec: Exec            =>
         root
           .executeExec(exec)
           .flatMap(lines => {
             lines.foreach(putStrLn(_))
           })
-      case ExecStored(command) =>
+      case ExecStored(command)   =>
         root
           .executeCommand(command)
           .flatMap(lines => {
@@ -36,9 +36,9 @@ object Main extends zio.App {
 
   override def run(args: List[String]): URIO[zio.ZEnv, ExitCode] =
     (for {
-      _ <- RepositorySetup.migrate(root.xa)
+      _       <- RepositorySetup.migrate(root.xa)
       command <- CommandParser.parseCommand(args)
-      _ <- runCommand(command)
+      _       <- runCommand(command)
     } yield ())
       .fold(
         err => ZIO(err.printStackTrace()),

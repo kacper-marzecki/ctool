@@ -4,15 +4,24 @@ import akka.actor.typed.ActorSystem
 import akka.actor.typed.scaladsl.Behaviors
 import akka.http.javadsl.HttpTerminated
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
-import akka.http.scaladsl.server.Directives.{complete, get, path}
+import akka.http.scaladsl.model.{ContentTypes, HttpEntity, StatusCodes}
+import akka.http.scaladsl.server.Directives._
 import com.mksoft.ctool.Model.Eff
 import zio.ZIO
 
 object Server {
 
   def routes(compositionRoot: CompositionRoot) =
-    path("hello") {
+    concat(
+      (get & pathPrefix("")) {
+        (pathEndOrSingleSlash & redirectToTrailingSlashIfMissing(
+          StatusCodes.TemporaryRedirect
+        )) {
+          getFromResource("webapp/index.html")
+        } ~ {
+          getFromResourceDirectory("webapp")
+        }
+      },
       get {
         complete(
           HttpEntity(
@@ -21,7 +30,7 @@ object Server {
           )
         )
       }
-    }
+    )
 
   def run(root: CompositionRoot): Eff[Nothing] = {
     ZIO

@@ -12,7 +12,16 @@ import zio.ZIO
 object Server {
 
   def routes(compositionRoot: CompositionRoot) =
-    concat(
+    pathPrefix("api") {
+      get {
+        complete(
+          HttpEntity(
+            ContentTypes.`text/html(UTF-8)`,
+            "<h1>Api path works</h1>"
+          )
+        )
+      }
+    } ~
       (get & pathPrefix("")) {
         (pathEndOrSingleSlash & redirectToTrailingSlashIfMissing(
           StatusCodes.TemporaryRedirect
@@ -21,16 +30,7 @@ object Server {
         } ~ {
           getFromResourceDirectory("webapp")
         }
-      },
-      get {
-        complete(
-          HttpEntity(
-            ContentTypes.`text/html(UTF-8)`,
-            "<h1>It works</h1>"
-          )
-        )
       }
-    )
 
   def run(root: CompositionRoot): Eff[Nothing] = {
     ZIO

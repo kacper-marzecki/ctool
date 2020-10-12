@@ -7,13 +7,15 @@ import { CommandPage } from './CommandPage';
 type Page = 'command';
 
 interface AppState {
-  //TODO
-  commandState: {};
+  commandState: { commands: string[] };
   selectedPage: Page;
 }
 
 function App() {
-  const [ state, setState ] = useState<AppState>({ commandState: {}, selectedPage: 'command' });
+  const [ state, setState ] = useState<AppState>({
+    commandState: { commands: [ 's', 'asd' ] },
+    selectedPage: 'command'
+  });
   const setPage = (page: Page) => () => {
     setState((s) => ({ ...s, selectedPage: page }));
   };

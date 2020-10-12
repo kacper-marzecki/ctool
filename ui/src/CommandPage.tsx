@@ -1,36 +1,28 @@
-import React from 'react';
+import React, {useState} from 'react';
+import { TabDefinition, Tabs } from './Tabs';
+import { add } from './utils';
+import {isatty} from "tty";
 
 interface Props {
-  commandState: {};
+  commandState: {
+    commands: string[];
+  };
 }
 
 export function CommandPage(props: Props) {
-  return (
-    <ul className="flex border-b">
-      // TODO
-      <li className="-mb-px mr-1">
-        <a
-          className="bg-white inline-block border-l border-t border-r rounded-t py-2 px-4 text-blue-700 font-semibold"
-          href="#"
-        >
-          Tab
-        </a>
-      </li>
-      <li className="mr-1">
-        <a className="bg-white inline-block py-2 px-4 text-blue-500 hover:text-blue-800 font-semibold" href="#">
-          Tab
-        </a>
-      </li>
-      <li className="mr-1">
-        <a className="bg-white inline-block py-2 px-4 text-blue-500 hover:text-blue-800 font-semibold" href="#">
-          Tab
-        </a>
-      </li>
-      <li className="mr-1">
-        <a className="bg-white inline-block py-2 px-4 text-gray-400 font-semibold" href="#">
-          Tab
-        </a>
-      </li>
-    </ul>
-  );
+  const commandTabs: TabDefinition[] = props.commandState.commands.map((it) => ({
+    name: it,
+    id: it,
+    content: <div>kekk</div>,
+    isActive: false
+  }));
+  const addTab = {
+    name: 'NEW',
+    id: 'NEW',
+    content: <div> added tab</div>,
+    isActive: true
+  };
+  const [tabs, setTabs] = useState(add(commandTabs, addTab))
+  const focusTab = (id: string) => setTabs(s => s.map(it => ({...it, isActive: it.id === id})))
+  return <Tabs tabs={tabs} onTabClick ={focusTab}  />;
 }

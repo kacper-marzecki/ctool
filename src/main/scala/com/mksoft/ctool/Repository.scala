@@ -23,7 +23,7 @@ object Repository {
   def xa() =
     Transactor.fromDriverManager[Eff](
       "org.sqlite.JDBC",
-      "jdbc:sqlite:sample.db",
+      "jdbc:sqlite:ctool.db",
       "",
       ""
     )

@@ -3,3 +3,4 @@
 .metals
 .vscode
 target
+ctool.db

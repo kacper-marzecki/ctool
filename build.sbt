@@ -33,7 +33,7 @@ copyWebapp := {
 copyWebapp := copyWebapp.dependsOn(yarnBuild).value
 
 libraryDependencies ++= Seq(
-  "org.typelevel"     %% "cats-core"        % "2.1.1",
+  "org.typelevel"     %% "cats-core"        % "2.1.1" ,
   "org.typelevel"     %% "cats-effect"      % "2.2.0",
   "dev.zio"           %% "zio"              % zioVersion,
   "dev.zio"           %% "zio-streams"      % zioVersion,

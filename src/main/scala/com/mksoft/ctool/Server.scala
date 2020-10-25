@@ -1,18 +1,58 @@
 package com.mksoft.ctool
 
-import akka.actor.typed.ActorSystem
+import java.time.LocalTime
+
+import akka.{Done, NotUsed}
+import akka.actor.typed.{ActorSystem, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
 import akka.http.javadsl.HttpTerminated
 import akka.http.scaladsl.Http
+import akka.http.scaladsl.model.sse.ServerSentEvent
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, StatusCodes}
 import akka.http.scaladsl.server.Directives._
+import akka.stream.{CompletionStrategy, OverflowStrategy}
+import akka.stream.scaladsl.{Sink, Source}
 import com.mksoft.ctool.Model.Eff
 import zio.ZIO
 
+
+// object Acto {
+//   def apply(): Behavior[NotUsed] = {
+//     Behaviors.setup(context => {
+//       context.wa
+//     })
+//   }
+// }
+
 object Server {
+  val s = Source.actorRef(completionMatcher = {
+    case Done =>
+      // complete stream immediately if we send it Done
+      CompletionStrategy.immediately
+  },
+    // never fail the stream because of a message
+    failureMatcher = PartialFunction.empty,
+    bufferSize = 100,
+    overflowStrategy = OverflowStrategy.dropHead)
+    // val a = s.to(Sink.foreach(println)).run()
+
 
   def routes(compositionRoot: CompositionRoot) =
     pathPrefix("api") {
+      path("sse") {
+        import akka.http.scaladsl.marshalling.sse.EventStreamMarshalling._
+        import scala.concurrent.duration._
+        import java.time.format.DateTimeFormatter.ISO_LOCAL_TIME
+        get {
+          complete(
+            Source
+              .tick(2.seconds, 2.seconds, NotUsed)
+              .map(_ => LocalTime.now())
+              .map(time => ServerSentEvent(ISO_LOCAL_TIME.format(time)))
+              .keepAlive(20.second, () => ServerSentEvent.heartbeat)
+            )
+        }
+      } ~
       get {
         complete(
           HttpEntity(

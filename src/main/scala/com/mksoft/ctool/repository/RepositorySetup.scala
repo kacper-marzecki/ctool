@@ -1,4 +1,4 @@
-package com.mksoft.ctool
+package com.mksoft.ctool.repository
 
 import com.mksoft.ctool.Model.Eff
 import com.mksoft.ctool.Utils.ignore

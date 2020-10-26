@@ -22,7 +22,7 @@ object CommandParser {
       case directory :: commandString :: Nil =>
         for {
           (command, args) <- commandAndSubcommands(commandString)
-        } yield Exec(directory, command, args)
+        } yield Exec(command,directory, args)
       case _ => failEx("Correct use: <directory> <command>")
     }
 

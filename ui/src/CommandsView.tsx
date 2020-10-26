@@ -3,21 +3,21 @@ import { Button, Tabs } from "antd";
 import React, { useState } from "react";
 import { add } from "./utils";
 import { match } from "ts-pattern";
+import { NewCommandForm } from "./NewCommandForm";
 
 export function CommandsView() {
     const NEW_COMMAND_KEY = "NEW_COMMAND_KEY"
     const [store, dispatch] = useApp();
-    const [state, setState] = useState<{ activeCommand?: string, adding: boolean }>({ adding: false });
+    const [state, setState] = useState<{ activeCommand?: string, adding: boolean }>({ activeCommand: undefined, adding: false });
 
     const addCommandTab = state.adding ?
         <Tabs.TabPane tab={"new command"} key={NEW_COMMAND_KEY} closable={false}>
-            NEW COMMAND FORM
+            <NewCommandForm />
         </Tabs.TabPane>
         : undefined
 
     return (
         <div>
-            <Button type="primary" onClick={(e) => setState(s => ({ ...s, activeCommand: NEW_COMMAND_KEY, adding: true }))}>NEW</Button>
             <Tabs type="editable-card" activeKey={state.activeCommand}
                 onEdit={(key, action) => {
                     match(action)

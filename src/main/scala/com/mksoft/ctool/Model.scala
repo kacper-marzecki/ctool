@@ -8,17 +8,16 @@ import zio.process.CommandError
 import zio.stream.ZStream
 
 object Model {
-  type Result[+L, +R] = ZIO[ZEnv, L, R]
-  type Eff[+A] = Result[Throwable, A]
+  type Result[+L, +R]    = ZIO[ZEnv, L, R]
+  type Eff[+A]           = Result[Throwable, A]
   type CommandLineStream = ZStream[Blocking, CommandError, String]
 }
 
-abstract sealed class AppCommand;
-
+sealed trait AppCommand;
 case class StartServer() extends AppCommand
 case class Exec(command: String, dir: String, args: List[String])
     extends AppCommand
-case class ExecStored(command: String) extends AppCommand
+case class ExecStored(command: String)    extends AppCommand
 case class ExecScala(commandName: String) extends AppCommand
 
 case class DirectoryE(dir: String, uses: Int)
@@ -39,3 +38,7 @@ case class StoredCommandE(
     dir: String,
     uses: Int
 )
+
+sealed trait ApiResponse[+E, +A]
+case class ApiSuccess[+E, +A](content:A, status: String = "success") extends ApiResponse[E, A]
+case class ApiError[+E, +A](cause:E, status: String = "error") extends ApiResponse[E, A]

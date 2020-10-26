@@ -58,7 +58,7 @@ object Service {
     for {
       stored ← getStoredCommand(commandName)
       stream ← executeExec(toExec(stored))
-      _ ← incrementStoredCommandUse(commandName)
+      _      ← incrementStoredCommandUse(commandName)
     } yield stream
   }
 
@@ -74,7 +74,7 @@ object Service {
       )
     for {
       stream ← command
-      _ ← persistUse(exec)
+      _      ← persistUse(exec)
     } yield stream
   }
 
@@ -87,6 +87,23 @@ object Service {
           .orElseFail(ex(s"Cannot Find Command with id: $id"))
       )
   }
+
+  def getTopCommands(getTopCommands: Eff[List[CommandE]]) =
+    for {
+      commands <- getTopCommands
+    } yield commands.map(_.commandString)
+
+  def getTopDirectories(getTopDirectories: Eff[List[DirectoryE]]) =
+    for {
+      directories <- getTopDirectories
+    } yield directories.map(_.dir)
+
+  def getTopArgs(
+      getTopArgsForCommand: String => Eff[List[String]]
+  )(command: String): Eff[List[String]] =
+    for {
+      args <- getTopArgsForCommand(command)
+    } yield args
 
   def toExec(s: StoredCommandE) =
     Exec(s.commandString, s.dir, s.args.split(";;;").toList)

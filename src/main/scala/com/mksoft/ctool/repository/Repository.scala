@@ -1,4 +1,4 @@
-package com.mksoft.ctool
+package com.mksoft.ctool.repository
 
 import java.sql.Timestamp
 
@@ -14,12 +14,12 @@ import scala.io.{BufferedSource, Source}
 import doobie.Fragments.{in, andOpt, whereAndOpt}
 import doobie.implicits.javasql._
 import doobie.implicits.javatime._
+import com.mksoft.ctool.CommandExecutionE
+import com.mksoft.ctool.StoredCommandE
+import com.mksoft.ctool.CommandE
+import com.mksoft.ctool.DirectoryE
 
 object Repository {
-//  implicit val storedCommandPut: Read[StoredCommandE] =
-//    Read[(String, String, String, String, Int)].map {
-//      case (a, b, c, d, e) ⇒ StoredCommandE(a, b, c, d, e)
-//    }
   def xa() =
     Transactor.fromDriverManager[Eff](
       "org.sqlite.JDBC",
@@ -34,22 +34,28 @@ object Repository {
     sql"insert or ignore into command(command_string) values ($e)".update.run
       .transact(xa)
       .map(ignore)
+
   }
 
   def persistDirQ(xa: Transactor[Eff])(e: String): Eff[Unit] = {
     sql"insert or ignore into directory(dir) values ($e)".update.run
       .transact(xa)
       .map(ignore)
+
   }
 
   def persistArgsQ(
       xa: Transactor[Eff]
   )(commandString: String, args: List[String]): Eff[Unit] = {
-    val values = args.map(arg ⇒ sql"($commandString, $arg)").intercalate(sql",")
-
-    (sql"insert or ignore into command_arg(command_string, arg) values " ++ values).update.run
-      .transact(xa)
-      .map(ignore)
+    if (args.isEmpty) {
+      ZIO.succeed(())
+    } else {
+      val values =
+        args.map(arg ⇒ sql"($commandString, $arg)").intercalate(sql",")
+      (sql"insert or ignore into command_arg(command_string, arg) values " ++ values).update.run
+        .transact(xa)
+        .map(ignore)
+    }
   }
 
   def incrementCommandUseQ(xa: Transactor[Eff])(
@@ -58,6 +64,7 @@ object Repository {
     sql"update command set uses = uses + 1 where command_string = $commandString".update.run
       .transact(xa)
       .map(ignore)
+
   }
 
   def incrementStoredCommandUseQ(xa: Transactor[Eff])(
@@ -66,6 +73,7 @@ object Repository {
     sql"update stored_command set uses = uses + 1 where name= $name".update.run
       .transact(xa)
       .map(ignore)
+
   }
 
   def incrementDirUseQ(xa: Transactor[Eff])(
@@ -80,7 +88,7 @@ object Repository {
       commandString: String,
       args: List[String]
   ): Eff[Unit] = {
-    val inArgs = args.toNel.map(a ⇒ Fragments.in(fr"arg", a))
+    val inArgs            = args.toNel.map(a ⇒ Fragments.in(fr"arg", a))
     val withCommandString = sql"command_string = $commandString".some
     val query =
       sql"update command_arg set uses = uses + 1 " ++ whereAndOpt(
@@ -95,7 +103,8 @@ object Repository {
   def persistCommandExecutionQ(
       xa: Transactor[Eff]
   )(e: CommandExecutionE) = {
-    sql"""insert into main.command_execution (time, command_string, args, dir) 
+    println(e)
+    sql"""insert into command_execution (time, command_string, args, dir) 
           VALUES (${e.time}, ${e.commandString}, ${e.args}, ${e.dir});
        """.update.run
       .transact(xa)
@@ -106,5 +115,23 @@ object Repository {
     sql"select name, command_string, args, dir, uses from stored_command where name = $id"
       .query[StoredCommandE]
       .option
+      .transact(xa)
+
+  def getTopCommandsQ(xa: Transactor[Eff]) =
+    sql"select command_string, uses from command"
+      .query[CommandE]
+      .to[List]
+      .transact(xa)
+
+  def getTopDirectoriesQ(xa: Transactor[Eff]) =
+    sql"select dir, uses from directory"
+      .query[DirectoryE]
+      .to[List]
+      .transact(xa)
+
+  def getTopArgsForCommandQ(xa: Transactor[Eff])(command: String) =
+    sql"select arg from command_arg where command_string = $command"
+      .query[String]
+      .to[List]
       .transact(xa)
 }

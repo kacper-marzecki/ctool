@@ -12,6 +12,7 @@ import zio.console.putStrLn
 import akka.http.scaladsl.server.Directives._
 import akka.actor.typed.ActorSystem
 import akka.actor.typed.scaladsl.Behaviors
+import com.mksoft.ctool.repository.RepositorySetup
 object Main extends zio.App {
   val root = CompositionRoot()
 

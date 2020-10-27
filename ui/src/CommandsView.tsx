@@ -28,7 +28,7 @@ export function CommandsView() {
                 onChange={(key) => {
                     setState(s => ({ ...s, activeCommand: key, adding: key === NEW_COMMAND_KEY }))
                 }}>
-                {Array.from(Array(20).keys()).map(it => {
+                {Array.from(Array(0).keys()).map(it => {
                     return <Tabs.TabPane tab={`tab ${it}`} key={it} closable={true}>
                         tab {it}
                     </Tabs.TabPane>

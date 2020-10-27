@@ -6,6 +6,7 @@ import cats.data._
 import cats.implicits._
 import akka.http.scaladsl.model.StatusCode
 import akka.http.scaladsl.model.StatusCodes._
+import akka.http.scaladsl.model.HttpHeader.ParsingResult.Ok
 object Encoders {
   implicit def apiResponseEncoder[E, A](implicit
       errorEncoder: Encoder[E],
@@ -32,30 +33,26 @@ object Encoders {
     }
   }
 }
+import com.mksoft.ctool.Model._
 
 object Utils {
   import Encoders.apiResponseEncoder
   def ex(errorMsg: String)                       = new LogicError(errorMsg)
   def failEx[E](errorMsg: String): Task[Nothing] = zio.ZIO.fail(ex(errorMsg))
   val ignore                                     = (_: Any) => ()
-  def foldToJson[E, A](
-      exit: zio.Exit[E, A]
-  )(implicit contentEncoder: Encoder[A]): (String, StatusCode) = {
-    val apiResponse: ApiResponse[String, A] =
-      exit.toEither.fold(
+  def foldToJson[A](
+      eff: Eff[A]
+  )(implicit contentEncoder: Encoder[A]): Eff[ApiResponse[String, A]] = {
+    eff
+      .fold[ApiResponse[String, A]](
         {
-          case LogicError(msg) => println("logic") ; ApiError(msg)
-          case _ @it => println("internal"); println(it)
+          case LogicError(msg) => ApiError(msg)
+          case _ @it =>
             InternalError(
               it.getStackTrace().toList.map(_.toString).intercalate("\n")
             )
         },
         ApiSuccess(_)
       )
-    val responseStatus = apiResponse match {
-      case InternalError(stackTrace) => InternalServerError
-      case _                         => OK
-    }
-    (apiResponse.asJson.noSpaces, responseStatus)
   }
 }

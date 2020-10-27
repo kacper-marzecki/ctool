@@ -7,7 +7,10 @@ import com.mksoft.ctool.Model.Eff
 import com.mksoft.ctool.repository.Repository
 import zio.ZIO
 import io.circe.Encoder
-import akka.http.scaladsl.server.Directives.complete
+import akka.http.scaladsl.server.Directives._
+import akka.http.scaladsl.model.StatusCodes._
+import io.circe._, io.circe.parser._, io.circe.syntax._
+import Encoders._
 case class CompositionRoot() {
   val xa = Repository.xa()
 
@@ -56,13 +59,17 @@ case class CompositionRoot() {
   }
 
   def completeJson[A](eff: Eff[A])(implicit ec: Encoder[A]) = {
-    val (responseJson, status) = Utils.foldToJson(
-      zioRuntime
-        .unsafeRunSync(eff)
-    )
-    akka.http.scaladsl.server.Directives.complete(
-      status,
-      responseJson
+    val a: zio.Exit[Throwable, ApiResponse[String, A]] = zioRuntime
+      .unsafeRunSync(Utils.foldToJson(eff))
+    a.fold(
+      it => complete(InternalServerError, "Unhandled"),
+      it => {
+        it match {
+          case InternalError(stackTrace) =>
+            complete(InternalServerError, stackTrace)
+          case _ @response => complete(OK, response.asJson.noSpaces)
+        }
+      }
     )
   }
 }

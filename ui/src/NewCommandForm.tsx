@@ -1,12 +1,12 @@
-import { AutoComplete, Button, Form, Input, Select } from "antd";
+import { AutoComplete, Button, Form, Input, notification, Select } from "antd";
 import { formatTimeStr } from "antd/lib/statistic/utils";
 import Axios from "axios";
 import { utimes } from "fs";
-import React, { useEffect, useState } from "react";
+import React, { ChangeEvent, ChangeEventHandler, useEffect, useState } from "react";
 import { debounce } from "ts-debounce";
 import { match } from "ts-pattern";
 import { getTokenSourceMapRange } from "typescript";
-import { apiGet, ApiResponse, formTouchedAndValid, notEmpty, wrapInField } from "./utils";
+import { apiGet, apiPost, ApiResponse, formTouchedAndValid, notEmpty, notifyError, wrapInField } from "./utils";
 import {
     SaveOutlined,
     PlayCircleOutlined
@@ -14,12 +14,15 @@ import {
 import { RuleObject } from "antd/lib/form";
 import { StoreValue } from "antd/lib/form/interface";
 import { stringify } from "querystring";
+import Modal from "antd/lib/modal/Modal";
+import { NotificationInstance } from "antd/lib/notification";
 
 interface State {
     commands: { value: string }[],
     dirs: { value: string }[],
     options: string[],
-    newCommandName: string
+    newCommandName: string,
+    saveCommandOpen: boolean
 }
 
 export function NewCommandForm() {
@@ -28,35 +31,47 @@ export function NewCommandForm() {
         commands: [],
         dirs: [],
         options: [],
-        newCommandName: ""
+        newCommandName: "",
+        saveCommandOpen: false
     })
 
     const saveStoredCommand = () => {
-        const data = { ...form.getFieldsValue(), name: "test" }
-        Axios.post("http://localhost:8080/api/command", data)
+        const data = { ...form.getFieldsValue(), name: state.newCommandName }
+        console.log(JSON.stringify(data))
+        apiPost("command", data)
+            .catch(notifyError)
     }
 
     useEffect(() => {
         apiGet<string[]>("command/top-commands")
             .then(it => it.map(wrapInField("value")))
-            .then(it => setState(s => ({ ...s, commands: it })));
+            .then(it => setState(s => ({ ...s, commands: it })))
+            .catch(notifyError)
         apiGet<string[]>("command/top-directories")
             .then(it => it.map(wrapInField("value")))
             .then(it => setState(s => ({ ...s, dirs: it })))
+            .catch(notifyError)
     }, [])
 
     const updateTopArgs = debounce((command: string) => {
         if (command) {
             apiGet<string[]>(`command/top-args/${command}`)
                 .then(it => setState(s => ({ ...s, options: it })))
+                .catch(notifyError)
         }
         ;
     },
         1000);
 
+
     const changeCommand = (command: string) => {
         form.setFieldsValue({ command: command, options: [] })
         updateTopArgs(command);
+    }
+
+    const updateNewCommandName = (e: ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        setState(s => ({ ...s, newCommandName: value }))
     }
 
     return <div>
@@ -85,7 +100,7 @@ export function NewCommandForm() {
                 {() => <Button
                     icon={<SaveOutlined />}
                     disabled={formTouchedAndValid(form)}
-                    onClick={saveStoredCommand}
+                    onClick={() => setState(s => ({ ...s, saveCommandOpen: true }))}
                 >
                     Save
           </Button>}
@@ -100,5 +115,18 @@ export function NewCommandForm() {
           </Button>}
             </Form.Item>
         </Form>
+        <Modal
+            title="Save Command"
+            visible={state.saveCommandOpen}
+            onOk={() => { saveStoredCommand(); setState(s => ({ ...s, saveCommandOpen: false })) }}
+            onCancel={() => setState(s => ({ ...s, saveCommandOpen: false }))}
+            okText="Save"
+            cancelText="Cancel"
+        >
+            <Form.Item label="Comand Name ">
+                <Input value={state.newCommandName} onChange={updateNewCommandName} />
+            </Form.Item>
+
+        </Modal>
     </div >
 }

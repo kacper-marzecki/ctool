@@ -2,7 +2,10 @@ package com.mksoft.ctool
 
 import zio.{IO, UIO, Task}
 import io.circe._, io.circe.parser._, io.circe.syntax._
-
+import cats.data._
+import cats.implicits._
+import akka.http.scaladsl.model.StatusCode
+import akka.http.scaladsl.model.StatusCodes._
 object Encoders {
   implicit def apiResponseEncoder[E, A](implicit
       errorEncoder: Encoder[E],
@@ -20,6 +23,11 @@ object Encoders {
             ("status", Json.fromString(status)),
             ("content", contentEncoder.apply(content))
           )
+        case InternalError(stackTrace) =>
+          Json.obj(
+            ("status", Json.fromString("INTERNAL SERVER ERROR")),
+            ("cause", Json.fromString(stackTrace))
+          )
       }
     }
   }
@@ -27,14 +35,27 @@ object Encoders {
 
 object Utils {
   import Encoders.apiResponseEncoder
-  def ex(errorMsg: String)                       = new RuntimeException(errorMsg)
+  def ex(errorMsg: String)                       = new LogicError(errorMsg)
   def failEx[E](errorMsg: String): Task[Nothing] = zio.ZIO.fail(ex(errorMsg))
   val ignore                                     = (_: Any) => ()
   def foldToJson[E, A](
       exit: zio.Exit[E, A]
-  )(implicit contentEncoder: Encoder[A]): String = {
+  )(implicit contentEncoder: Encoder[A]): (String, StatusCode) = {
     val apiResponse: ApiResponse[String, A] =
-      exit.fold(it => ApiError(it.prettyPrint), it => ApiSuccess(it))
-    apiResponse.asJson.noSpaces
+      exit.toEither.fold(
+        {
+          case LogicError(msg) => println("logic") ; ApiError(msg)
+          case _ @it => println("internal"); println(it)
+            InternalError(
+              it.getStackTrace().toList.map(_.toString).intercalate("\n")
+            )
+        },
+        ApiSuccess(_)
+      )
+    val responseStatus = apiResponse match {
+      case InternalError(stackTrace) => InternalServerError
+      case _                         => OK
+    }
+    (apiResponse.asJson.noSpaces, responseStatus)
   }
 }

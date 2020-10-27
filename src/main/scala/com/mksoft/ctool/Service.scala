@@ -79,13 +79,44 @@ object Service {
   }
 
   def getStoredCommand(
-      getById: (String) => Eff[Option[StoredCommandE]]
+      getByName: (String) => Eff[Option[StoredCommandE]]
   )(id: String) = {
-    getById(id)
+    getByName(id)
       .flatMap(
         fromOption(_)
           .orElseFail(ex(s"Cannot Find Command with id: $id"))
       )
+  }
+
+  def saveStoredCommand(
+      persistCommand: String ⇒ Eff[Unit],
+      persistDir: String ⇒ Eff[Unit],
+      persistArgs: (String, List[String]) ⇒ Eff[Unit],
+      getByName: (String) => Eff[Option[StoredCommandE]],
+      saveStoredCommand: (StoredCommandE) => Eff[Unit]
+  )(in: SaveStoredCommandIn): Eff[Unit] = {
+    val validation = for {
+      maybeStoredCommand <- getByName(in.name)
+      exists = !maybeStoredCommand.isEmpty
+      _ <-
+        if (exists) {
+          Utils.failEx(s"Command with name ${in.name} already Exists")
+        } else { ZIO.succeed(()) }
+    } yield ()
+
+    validation *>
+      saveStoredCommand(
+        StoredCommandE(
+          name = in.name,
+          commandString = in.command,
+          args = in.options.intercalate(";;;"),
+          dir = in.dir,
+          uses = 0
+        )
+      ) *>
+      persistCommand(in.command) *>
+      persistDir(in.dir) *>
+      persistArgs(in.command, in.options)
   }
 
   def getTopCommands(getTopCommands: Eff[List[CommandE]]) =

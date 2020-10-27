@@ -39,6 +39,14 @@ case class CompositionRoot() {
     Repository.incrementStoredCommandUseQ(xa)(_)
   )(_)
 
+  val saveStoredCommand = Service.saveStoredCommand(
+    persistCommand = Repository.persistCommandQ(xa)(_),
+    persistDir = Repository.persistDirQ(xa)(_),
+    persistArgs = Repository.persistArgsQ(xa)(_, _),
+    Repository.getCommandQ(xa),
+    Repository.saveStoredCommandQ(xa)(_)
+  )(_: SaveStoredCommandIn)
+
   val getTopCommands = Service.getTopCommands(Repository.getTopCommandsQ(xa))
   val getTopDirectories =
     Service.getTopDirectories(Repository.getTopDirectoriesQ(xa))
@@ -47,11 +55,14 @@ case class CompositionRoot() {
     Service.getTopArgs(Repository.getTopArgsForCommandQ(xa)(_))(command)
   }
 
-
-  def completeJson[A](eff: Eff[A])(implicit ec: Encoder[A]) = akka.http.scaladsl.server.Directives.complete(
-          Utils.foldToJson(
-           zioRuntime
-              .unsafeRunSync(eff)
-          )
-        )
+  def completeJson[A](eff: Eff[A])(implicit ec: Encoder[A]) = {
+    val (responseJson, status) = Utils.foldToJson(
+      zioRuntime
+        .unsafeRunSync(eff)
+    )
+    akka.http.scaladsl.server.Directives.complete(
+      status,
+      responseJson
+    )
+  }
 }

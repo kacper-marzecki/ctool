@@ -20,6 +20,9 @@ case class Exec(command: String, dir: String, args: List[String])
 case class ExecStored(command: String)    extends AppCommand
 case class ExecScala(commandName: String) extends AppCommand
 
+case class LogicError(msg: String) extends RuntimeException(msg)
+
+// Entities
 case class DirectoryE(dir: String, uses: Int)
 case class CommandE(commandString: String, uses: Int)
 case class CommandArgE(commandString: String, arg: String, uses: Int)
@@ -39,6 +42,17 @@ case class StoredCommandE(
     uses: Int
 )
 
+// Requests
+case class SaveStoredCommandIn(
+    name: String,
+    command: String,
+    options: List[String],
+    dir: String
+)
+
 sealed trait ApiResponse[+E, +A]
-case class ApiSuccess[+E, +A](content:A, status: String = "success") extends ApiResponse[E, A]
-case class ApiError[+E, +A](cause:E, status: String = "error") extends ApiResponse[E, A]
+case class ApiSuccess[+E, +A](content: A, status: String = "success")
+    extends ApiResponse[E, A]
+case class ApiError[+E, +A](cause: E, status: String = "error")
+    extends ApiResponse[E, A]
+case class InternalError[+E, +A](stackTrace: String) extends ApiResponse[E, A]

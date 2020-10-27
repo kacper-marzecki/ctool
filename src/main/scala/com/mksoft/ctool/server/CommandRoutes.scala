@@ -9,12 +9,16 @@ import scala.util.Success
 import com.mksoft.ctool.Utils._
 import com.mksoft.ctool.Model.Eff
 import zio.Runtime
+import akka.http.scaladsl.unmarshalling.Unmarshal
 
 import io.circe._, io.circe.generic.auto._, io.circe.parser._, io.circe.syntax._
 import zio.ZIO
 object CommandRoutes {
   def apply(compositionRoot: CompositionRoot): Route = {
     import compositionRoot._
+    import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
+    import io.circe.generic.auto._
+
     (pathPrefix("command")) {
       (get & path("top-commands")) {
         completeJson(getTopCommands)
@@ -25,6 +29,11 @@ object CommandRoutes {
         (get & pathPrefix("top-args")) {
           path(Segment) { it =>
             completeJson(getTopArgs(it))
+          }
+        } ~
+        (post & pathEndOrSingleSlash) {
+          entity(as[SaveStoredCommandIn]) { it =>
+            completeJson(saveStoredCommand(it))
           }
         }
     }

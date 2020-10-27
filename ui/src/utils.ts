@@ -3,6 +3,7 @@ import { StoreValue } from "antd/lib/form/interface";
 import Axios from "axios";
 import { promises } from "dns";
 import { match, __ } from "ts-pattern";
+import { StructuredType } from "typescript";
 
 export function add<T>(arr: T[], elem: T): T[] {
   arr.push(elem);
@@ -36,7 +37,7 @@ export function apiGet<T>(path: string): Promise<T> {
  */
 export const notEmpty = (rule: RuleObject, value: StoreValue, callback: (error?: string) => void) => {
 
-  if (value.length === 0) {
+  if ((value as string).trim().length === 0) {
     // TODO internationalize ?
     callback("Cannot be empty")
   }
@@ -45,4 +46,12 @@ export const notEmpty = (rule: RuleObject, value: StoreValue, callback: (error?:
 export const formTouchedAndValid = (form: FormInstance<any>) => {
   return !form.isFieldsTouched(false) ||
     form.getFieldsError().filter(({ errors }) => errors.length).length !== 0
+}
+
+export function wrapInField<K extends keyof any, T>(fieldName: K): (value: T) => { [P in K]: T } {
+  return (value) => {
+    let wrapper = {} as { [P in K]: T }
+    wrapper[fieldName] = value;
+    return wrapper;
+  }
 }

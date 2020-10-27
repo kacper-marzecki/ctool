@@ -103,9 +103,18 @@ object Repository {
   def persistCommandExecutionQ(
       xa: Transactor[Eff]
   )(e: CommandExecutionE) = {
-    println(e)
     sql"""insert into command_execution (time, command_string, args, dir) 
           VALUES (${e.time}, ${e.commandString}, ${e.args}, ${e.dir});
+       """.update.run
+      .transact(xa)
+      .map(ignore)
+  }
+
+  def saveStoredCommandQ(
+      xa: Transactor[Eff]
+  )(e: StoredCommandE) = {
+    sql"""insert into stored_command(name, command_string, args, dir, uses)
+          values(${e.name}, ${e.commandString}, ${e.args}, ${e.dir}, ${e.uses})
        """.update.run
       .transact(xa)
       .map(ignore)

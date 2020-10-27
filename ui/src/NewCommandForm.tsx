@@ -6,27 +6,42 @@ import React, { useEffect, useState } from "react";
 import { debounce } from "ts-debounce";
 import { match } from "ts-pattern";
 import { getTokenSourceMapRange } from "typescript";
-import { apiGet, ApiResponse, formTouchedAndValid, notEmpty } from "./utils";
+import { apiGet, ApiResponse, formTouchedAndValid, notEmpty, wrapInField } from "./utils";
 import {
     SaveOutlined,
     PlayCircleOutlined
 } from '@ant-design/icons';
 import { RuleObject } from "antd/lib/form";
 import { StoreValue } from "antd/lib/form/interface";
+import { stringify } from "querystring";
+
+interface State {
+    commands: { value: string }[],
+    dirs: { value: string }[],
+    options: string[],
+    newCommandName: string
+}
 
 export function NewCommandForm() {
     const [form] = Form.useForm<{ command: string, options: string[], dir: string }>()
-    const [state, setState] = useState<{ commands: { value: string }[], dirs: { value: string }[], options: string[] }>({
+    const [state, setState] = useState<State>({
         commands: [],
         dirs: [],
-        options: []
+        options: [],
+        newCommandName: ""
     })
+
+    const saveStoredCommand = () => {
+        const data = { ...form.getFieldsValue(), name: "test" }
+        Axios.post("http://localhost:8080/api/command", data)
+    }
+
     useEffect(() => {
         apiGet<string[]>("command/top-commands")
-            .then(it => it.map(val => ({ value: val })))
+            .then(it => it.map(wrapInField("value")))
             .then(it => setState(s => ({ ...s, commands: it })));
         apiGet<string[]>("command/top-directories")
-            .then(it => it.map(val => ({ value: val })))
+            .then(it => it.map(wrapInField("value")))
             .then(it => setState(s => ({ ...s, dirs: it })))
     }, [])
 
@@ -70,7 +85,7 @@ export function NewCommandForm() {
                 {() => <Button
                     icon={<SaveOutlined />}
                     disabled={formTouchedAndValid(form)}
-                    onClick={() => console.error(form.getFieldsError().filter(({ errors }) => errors.length).length !== 0)}
+                    onClick={saveStoredCommand}
                 >
                     Save
           </Button>}
@@ -79,11 +94,11 @@ export function NewCommandForm() {
                 {() => <Button
                     icon={<PlayCircleOutlined />}
                     disabled={formTouchedAndValid(form)}
-                    onClick={() => console.error(form.getFieldsError().filter(({ errors }) => errors.length).length !== 0)}
+                    onClick={() => console.error(form.getFieldsError())}
                 >
                     Execute
           </Button>}
             </Form.Item>
         </Form>
-    </div>
+    </div >
 }

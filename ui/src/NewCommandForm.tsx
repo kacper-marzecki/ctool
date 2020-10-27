@@ -6,7 +6,13 @@ import React, { useEffect, useState } from "react";
 import { debounce } from "ts-debounce";
 import { match } from "ts-pattern";
 import { getTokenSourceMapRange } from "typescript";
-import { apiGet, ApiResponse } from "./utils";
+import { apiGet, ApiResponse, formTouchedAndValid, notEmpty } from "./utils";
+import {
+    SaveOutlined,
+    PlayCircleOutlined
+} from '@ant-design/icons';
+import { RuleObject } from "antd/lib/form";
+import { StoreValue } from "antd/lib/form/interface";
 
 export function NewCommandForm() {
     const [form] = Form.useForm<{ command: string, options: string[], dir: string }>()
@@ -25,24 +31,26 @@ export function NewCommandForm() {
     }, [])
 
     const updateTopArgs = debounce((command: string) => {
-        apiGet<string[]>(`command/top-args/${command}`)
-            .then(it => setState(s => ({ ...s, options: it })));
+        if (command) {
+            apiGet<string[]>(`command/top-args/${command}`)
+                .then(it => setState(s => ({ ...s, options: it })))
+        }
+        ;
     },
         1000);
 
     const changeCommand = (command: string) => {
-        form.setFieldsValue({ command: command, options: []})
+        form.setFieldsValue({ command: command, options: [] })
         updateTopArgs(command);
     }
 
     return <div>
         <Form layout="inline" name="command-form" form={form}>
-            <Form.Item name="command" label="Command">
+            <Form.Item name="command" label="Command" rules={[{ required: true, validator: notEmpty }]}>
                 <AutoComplete style={{ width: 200 }}
                     options={state.commands}
                     value={form.getFieldValue("command")}
                     onChange={changeCommand}
-                    onSelect={changeCommand}
                     placeholder="Enter command" />
             </Form.Item>
             <Form.Item name="dir" label="Directory">
@@ -58,7 +66,24 @@ export function NewCommandForm() {
                 </Select>
             </Form.Item>
 
+            <Form.Item shouldUpdate>
+                {() => <Button
+                    icon={<SaveOutlined />}
+                    disabled={formTouchedAndValid(form)}
+                    onClick={() => console.error(form.getFieldsError().filter(({ errors }) => errors.length).length !== 0)}
+                >
+                    Save
+          </Button>}
+            </Form.Item>
+            <Form.Item shouldUpdate>
+                {() => <Button
+                    icon={<PlayCircleOutlined />}
+                    disabled={formTouchedAndValid(form)}
+                    onClick={() => console.error(form.getFieldsError().filter(({ errors }) => errors.length).length !== 0)}
+                >
+                    Execute
+          </Button>}
+            </Form.Item>
         </Form>
-        <Button onClick={() => console.error(JSON.stringify(form.getFieldsValue()))}> KEKKE</Button>
     </div>
 }

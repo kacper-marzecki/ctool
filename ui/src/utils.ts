@@ -1,3 +1,5 @@
+import { FormInstance, RuleObject } from "antd/lib/form";
+import { StoreValue } from "antd/lib/form/interface";
 import Axios from "axios";
 import { promises } from "dns";
 import { match, __ } from "ts-pattern";
@@ -27,4 +29,20 @@ export function apiGet<T>(path: string): Promise<T> {
           return Promise.resolve(data.content);
       }
     })
-} 
+}
+
+/**
+ * AntD string validator 
+ */
+export const notEmpty = (rule: RuleObject, value: StoreValue, callback: (error?: string) => void) => {
+
+  if (value.length === 0) {
+    // TODO internationalize ?
+    callback("Cannot be empty")
+  }
+}
+
+export const formTouchedAndValid = (form: FormInstance<any>) => {
+  return !form.isFieldsTouched(false) ||
+    form.getFieldsError().filter(({ errors }) => errors.length).length !== 0
+}

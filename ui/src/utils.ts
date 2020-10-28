@@ -3,20 +3,13 @@ import { FormInstance, RuleObject } from "antd/lib/form";
 import { StoreValue } from "antd/lib/form/interface";
 import { NotificationInstance } from "antd/lib/notification";
 import Axios, { AxiosResponse } from "axios";
-import { promises } from "dns";
-import { match, __ } from "ts-pattern";
-import { StructuredType } from "typescript";
+import React from "react";
+import { ApiResponse } from "./model";
 
 export function add<T>(arr: T[], elem: T): T[] {
   arr.push(elem);
   return arr;
 }
-
-
-export type ApiResponse<T> =
-  | { status: "success", content: T }
-  | { status: "error", cause: string }
-
 
 const apiPath = (path: string) => `http://localhost:8080/api/${path}`
 
@@ -51,7 +44,7 @@ export const notEmpty = (rule: RuleObject, value: StoreValue, callback: (error?:
   }
 }
 
-export const formTouchedAndValid = (form: FormInstance<any>) => {
+export const formTouchedAndValid = (form: FormInstance) => {
   return !form.isFieldsTouched(false) ||
     form.getFieldsError().filter(({ errors }) => errors.length).length !== 0
 }
@@ -71,5 +64,27 @@ const openNotification = (type: keyof NotificationInstance, msg: string) => {
     description: msg
   });
 };
+
+type UnionToIntersection<U> =
+  (U extends any
+    ? (k: U) => void
+    : never
+  ) extends ((k: infer I) => void) ? I : never
+
+type UpdateFn<T> = {
+  [K in keyof T]: (field: K) => (value: T[K]) => void
+}[keyof T];
+
+export function stateUpdateFn<A>(
+  setState: React.Dispatch<React.SetStateAction<A>>
+): UnionToIntersection<UpdateFn<A>> {
+  const updateFn: UpdateFn<A> = field => value => {
+    setState(s => ({
+      ...s,
+      [field]: value
+    }))
+  }
+  return updateFn as UnionToIntersection<UpdateFn<A>>
+}
 
 export const notifyError = (reason: any) => openNotification('error', JSON.stringify(reason))

@@ -1,7 +1,6 @@
 import React, {useState} from 'react';
 import { TabDefinition, Tabs } from './Tabs';
 import { add } from './utils';
-import {isatty} from "tty";
 
 interface Props {
   commandState: {

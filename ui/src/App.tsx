@@ -16,6 +16,7 @@ import {
 } from '@ant-design/icons';
 import { CommandsView } from "./CommandsView";
 import { match } from 'ts-pattern';
+import {stateUpdateFn} from "./utils";
 
 const { Header, Content, Footer, Sider } = Layout;
 const { SubMenu } = Menu;
@@ -25,10 +26,7 @@ function App() {
     const [state, setState] = useState({
         collapsed: true,
     });
-
-    const onCollapse = (collapsed: boolean) => {
-        setState({ collapsed });
-    };
+    const updateStateAt = stateUpdateFn(setState)
 
     const content = match(appState.selectedPage)
         .with("command", _ => <CommandsView />)
@@ -37,7 +35,7 @@ function App() {
 
     return (
         <Layout style={{ minHeight: '100vh' }}>
-            <Sider collapsible collapsed={state.collapsed} onCollapse={onCollapse}>
+            <Sider collapsible collapsed={state.collapsed} onCollapse={updateStateAt("collapsed")}>
                 <Menu theme="dark" defaultSelectedKeys={['1']} mode="inline">
                     <Menu.Item key="1" onClick={(e) => dispatch(changePage("command"))} icon={<RocketOutlined />}>
                         Run Command

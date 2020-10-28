@@ -1,27 +1,17 @@
-import { AutoComplete, Button, Form, Input, notification, Select } from "antd";
-import { formatTimeStr } from "antd/lib/statistic/utils";
-import Axios from "axios";
-import { utimes } from "fs";
-import React, { ChangeEvent, ChangeEventHandler, useEffect, useState } from "react";
-import { debounce } from "ts-debounce";
-import { match } from "ts-pattern";
-import { getTokenSourceMapRange } from "typescript";
-import { apiGet, apiPost, ApiResponse, formTouchedAndValid, notEmpty, notifyError, wrapInField } from "./utils";
-import {
-    SaveOutlined,
-    PlayCircleOutlined
-} from '@ant-design/icons';
-import { RuleObject } from "antd/lib/form";
-import { StoreValue } from "antd/lib/form/interface";
-import { stringify } from "querystring";
+import {AutoComplete, Button, Form, Input, Select, Table, Tabs} from "antd";
+import React, {ChangeEvent, useEffect, useState} from "react";
+import {debounce} from "ts-debounce";
+import {apiGet, apiPost, formTouchedAndValid, notEmpty, notifyError, stateUpdateFn, wrapInField} from "./utils";
+import {PlayCircleOutlined, SaveOutlined} from '@ant-design/icons';
 import Modal from "antd/lib/modal/Modal";
-import { NotificationInstance } from "antd/lib/notification";
+import {StoredCommand} from "./model";
 
 interface State {
     commands: { value: string }[],
     dirs: { value: string }[],
     options: string[],
     newCommandName: string,
+    storedCommands: StoredCommand[]
     saveCommandOpen: boolean
 }
 
@@ -32,8 +22,10 @@ export function NewCommandForm() {
         dirs: [],
         options: [],
         newCommandName: "",
+        storedCommands: [],
         saveCommandOpen: false
     })
+    const updateStateAt = stateUpdateFn(setState)
 
     const saveStoredCommand = () => {
         const data = { ...form.getFieldsValue(), name: state.newCommandName }
@@ -45,21 +37,23 @@ export function NewCommandForm() {
     useEffect(() => {
         apiGet<string[]>("command/top-commands")
             .then(it => it.map(wrapInField("value")))
-            .then(it => setState(s => ({ ...s, commands: it })))
+            .then(updateStateAt("commands"))
             .catch(notifyError)
         apiGet<string[]>("command/top-directories")
             .then(it => it.map(wrapInField("value")))
-            .then(it => setState(s => ({ ...s, dirs: it })))
+            .then(updateStateAt("dirs"))
+            .catch(notifyError)
+        apiGet<StoredCommand[]>("command/stored")
+            .then(updateStateAt("storedCommands"))
             .catch(notifyError)
     }, [])
 
     const updateTopArgs = debounce((command: string) => {
         if (command) {
             apiGet<string[]>(`command/top-args/${command}`)
-                .then(it => setState(s => ({ ...s, options: it })))
+                .then(updateStateAt("options"))
                 .catch(notifyError)
         }
-        ;
     },
         1000);
 
@@ -71,9 +65,17 @@ export function NewCommandForm() {
 
     const updateNewCommandName = (e: ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
-        setState(s => ({ ...s, newCommandName: value }))
+        updateStateAt("newCommandName")(value)
     }
+    let columns = [{
+        title: 'Column 1',
+        dataIndex: 'name',
+        key: '1',
+        width: 150,
+    },]
 
+
+    let tableData = Array.from(Array(20).keys()).map(it => ({ name: `kek ${it}` }))
     return <div>
         <Form layout="inline" name="command-form" form={form}>
             <Form.Item name="command" label="Command" rules={[{ required: true, validator: notEmpty }]}>
@@ -95,12 +97,11 @@ export function NewCommandForm() {
                     {state.options.map(option => <Select.Option key={option} value={option}>{option}</Select.Option>)}
                 </Select>
             </Form.Item>
-
             <Form.Item shouldUpdate>
                 {() => <Button
                     icon={<SaveOutlined />}
                     disabled={formTouchedAndValid(form)}
-                    onClick={() => setState(s => ({ ...s, saveCommandOpen: true }))}
+                    onClick={() => updateStateAt("saveCommandOpen")(true)}
                 >
                     Save
           </Button>}
@@ -109,21 +110,32 @@ export function NewCommandForm() {
                 {() => <Button
                     icon={<PlayCircleOutlined />}
                     disabled={formTouchedAndValid(form)}
-                    onClick={() => console.error(form.getFieldsError())}
+                    onClick={() => console.error("NOT IMPLEMENTED")}
                 >
                     Execute
           </Button>}
             </Form.Item>
         </Form>
+
+        <Tabs defaultActiveKey="1" >
+            <Tabs.TabPane tab="Saved" key="1">
+                <Table columns={columns} dataSource={tableData} sticky />,
+
+            </Tabs.TabPane>
+            <Tabs.TabPane tab="Recent" key="2">
+                Recent Commands
+            </Tabs.TabPane>
+        </Tabs>
+
         <Modal
             title="Save Command"
             visible={state.saveCommandOpen}
-            onOk={() => { saveStoredCommand(); setState(s => ({ ...s, saveCommandOpen: false })) }}
-            onCancel={() => setState(s => ({ ...s, saveCommandOpen: false }))}
+            onOk={() => { saveStoredCommand(); updateStateAt("saveCommandOpen")(false) }}
+            onCancel={() => updateStateAt("saveCommandOpen")(false)}
             okText="Save"
             cancelText="Cancel"
         >
-            <Form.Item label="Comand Name ">
+            <Form.Item label="Command Name ">
                 <Input value={state.newCommandName} onChange={updateNewCommandName} />
             </Form.Item>
 

@@ -50,6 +50,8 @@ case class CompositionRoot() {
     Repository.saveStoredCommandQ(xa)(_)
   )(_: SaveStoredCommandIn)
 
+  val getStoredCommands = Service.getStoredCommands(Repository.getStoredCommandsQ(xa))
+  val getRecentCommands: Eff[List[CommandExecutionOut]] = Service.getRecentCommands(Repository.getRecentCommandsQ(xa))
   val getTopCommands = Service.getTopCommands(Repository.getTopCommandsQ(xa))
   val getTopDirectories =
     Service.getTopDirectories(Repository.getTopDirectoriesQ(xa))

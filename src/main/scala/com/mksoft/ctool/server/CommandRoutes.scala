@@ -31,6 +31,13 @@ object CommandRoutes {
             completeJson(getTopArgs(it))
           }
         } ~
+        (get & pathPrefix("recent")) {
+          // TODO paginate
+          completeJson(compositionRoot.getRecentCommands)
+        } ~
+        (get & pathPrefix("stored")) {
+            completeJson(getStoredCommands)
+        } ~
         (post & pathEndOrSingleSlash) {
           entity(as[SaveStoredCommandIn]) { it =>
             completeJson(saveStoredCommand(it))

@@ -12,7 +12,7 @@ object CommandParser {
       commandString: String
   ): Eff[(String, List[String])] = {
     commandString.split(' ').toList match {
-      case head :: rest => succeed((head, rest))
+      case head :: rest => succeed((head, rest.filter(!_.isBlank)))
       case _            => failEx("kek")
     }
   }

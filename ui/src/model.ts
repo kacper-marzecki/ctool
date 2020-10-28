@@ -1,9 +1,16 @@
 export interface StoredCommand {
     name: string,
     commandString: string,
-    args: string,
+    args: string[],
     dir: string,
     uses: number
+}
+
+export interface CommandExecution {
+    commandString: string,
+    args: string[],
+    dir: string,
+    time: number
 }
 
 

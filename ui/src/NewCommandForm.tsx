@@ -1,10 +1,13 @@
-import {AutoComplete, Button, Form, Input, Select, Table, Tabs} from "antd";
-import React, {ChangeEvent, useEffect, useState} from "react";
-import {debounce} from "ts-debounce";
-import {apiGet, apiPost, formTouchedAndValid, notEmpty, notifyError, stateUpdateFn, wrapInField} from "./utils";
-import {PlayCircleOutlined, SaveOutlined} from '@ant-design/icons';
+import { AutoComplete, Button, Form, Input, Select, Table, Tabs } from "antd";
+import React, { ChangeEvent, useEffect, useState } from "react";
+import { debounce } from "ts-debounce";
+import { apiGet, apiPost, formTouchedAndValid, notEmpty, notifyError, prettyPrint, stateUpdateFn, wrapInField } from "./utils";
+import { PlayCircleOutlined, SaveOutlined } from '@ant-design/icons';
 import Modal from "antd/lib/modal/Modal";
-import {StoredCommand} from "./model";
+import { StoredCommand } from "./model";
+import { ColumnsType } from "antd/lib/table";
+import { StoredCommandList } from "./StoredCommandList";
+import { RecentCommandList } from "./RecentCommandList";
 
 interface State {
     commands: { value: string }[],
@@ -67,15 +70,12 @@ export function NewCommandForm() {
         const value = e.target.value;
         updateStateAt("newCommandName")(value)
     }
-    let columns = [{
-        title: 'Column 1',
-        dataIndex: 'name',
-        key: '1',
-        width: 150,
-    },]
 
+    const setFormFromStoredCommand = (command: StoredCommand) => {
+        form.setFieldsValue({ command: command.commandString, options: command.args, dir: command.dir })
+        updateTopArgs(command.commandString);
+    }
 
-    let tableData = Array.from(Array(20).keys()).map(it => ({ name: `kek ${it}` }))
     return <div>
         <Form layout="inline" name="command-form" form={form}>
             <Form.Item name="command" label="Command" rules={[{ required: true, validator: notEmpty }]}>
@@ -86,7 +86,7 @@ export function NewCommandForm() {
                     placeholder="Enter command" />
             </Form.Item>
             <Form.Item name="dir" label="Directory">
-                <AutoComplete style={{ width: 200 }}
+                <AutoComplete style={{ minWidth: '20em' }}
                     options={state.dirs}
                     value={form.getFieldValue("dir")}
                     onChange={(it) => form.setFieldsValue({ dir: it })}
@@ -119,26 +119,29 @@ export function NewCommandForm() {
 
         <Tabs defaultActiveKey="1" >
             <Tabs.TabPane tab="Saved" key="1">
-                <Table columns={columns} dataSource={tableData} sticky />,
-
+                <StoredCommandList
+                    selectCommand={setFormFromStoredCommand}
+                    executeCommand={(command) => notifyError(`command Executed: ${prettyPrint(command)}`)} />
             </Tabs.TabPane>
             <Tabs.TabPane tab="Recent" key="2">
-                Recent Commands
+                <RecentCommandList
+                    selectCommand={setFormFromStoredCommand}
+                    executeCommand={(command) => notifyError(`command Executed: ${prettyPrint(command)}`)} />
             </Tabs.TabPane>
         </Tabs>
 
-        <Modal
-            title="Save Command"
-            visible={state.saveCommandOpen}
-            onOk={() => { saveStoredCommand(); updateStateAt("saveCommandOpen")(false) }}
-            onCancel={() => updateStateAt("saveCommandOpen")(false)}
-            okText="Save"
-            cancelText="Cancel"
-        >
-            <Form.Item label="Command Name ">
-                <Input value={state.newCommandName} onChange={updateNewCommandName} />
-            </Form.Item>
+            <Modal
+                title="Save Command"
+                visible={state.saveCommandOpen}
+                onOk={() => { saveStoredCommand(); updateStateAt("saveCommandOpen")(false) }}
+                onCancel={() => updateStateAt("saveCommandOpen")(false)}
+                okText="Save"
+                cancelText="Cancel"
+            >
+                <Form.Item label="Command Name ">
+                    <Input value={state.newCommandName} onChange={updateNewCommandName} />
+                </Form.Item>
 
-        </Modal>
+            </Modal>
     </div >
 }

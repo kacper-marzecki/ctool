@@ -50,6 +50,21 @@ case class SaveStoredCommandIn(
     dir: String
 )
 
+// Responses
+case class StoredCommandOut(
+    name: String,
+    commandString: String,
+    args: List[String],
+    dir: String,
+    uses: Int
+)
+case class CommandExecutionOut(
+    time: Long,
+    commandString: String,
+    args: List[String],
+    dir: String
+)
+
 sealed trait ApiResponse[+E, +A]
 case class ApiSuccess[+E, +A](content: A, status: String = "success")
     extends ApiResponse[E, A]

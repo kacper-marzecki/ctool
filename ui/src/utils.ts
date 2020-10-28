@@ -75,6 +75,10 @@ type UpdateFn<T> = {
   [K in keyof T]: (field: K) => (value: T[K]) => void
 }[keyof T];
 
+type LazyUpdateFn<T> = {
+  [K in keyof T]: (field: K) => (value: T[K]) => () => void
+}[keyof T];
+
 export function stateUpdateFn<A>(
   setState: React.Dispatch<React.SetStateAction<A>>
 ): UnionToIntersection<UpdateFn<A>> {
@@ -87,4 +91,23 @@ export function stateUpdateFn<A>(
   return updateFn as UnionToIntersection<UpdateFn<A>>
 }
 
-export const notifyError = (reason: any) => openNotification('error', JSON.stringify(reason))
+export function stateUpdateFunctions<A>(
+  setState: React.Dispatch<React.SetStateAction<A>>
+): [UnionToIntersection<UpdateFn<A>>, UnionToIntersection<LazyUpdateFn<A>>] {
+  const eager = stateUpdateFn(setState)
+  const lazy: LazyUpdateFn<A> = field => value => () => {
+    setState(s => ({
+      ...s,
+      [field]: value
+    }))
+  }
+  return [eager, lazy as UnionToIntersection<UpdateFn<A>>]
+}
+
+export const notifyError = (reason: any) => openNotification('error', prettyPrint(reason))
+export const notifyErrorAnd = (action: () => void) => (reason: any) => {
+  notifyError(reason)
+  action()
+}
+
+export const prettyPrint = (it: any) => JSON.stringify(it, null, ' ');

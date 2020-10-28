@@ -88,6 +88,21 @@ object Service {
       )
   }
 
+  def getStoredCommands(getStoredCommands: Eff[List[StoredCommandE]]) = {
+    val toOut = (it: StoredCommandE) => {
+      StoredCommandOut(
+        args = it.args.split(";;;").toList,
+        commandString = it.commandString,
+        dir = it.dir,
+        name = it.name,
+        uses = it.uses
+      )
+    }
+    for {
+      commands <- getStoredCommands
+    } yield commands.map(toOut)
+  }
+
   def saveStoredCommand(
       persistCommand: String ⇒ Eff[Unit],
       persistDir: String ⇒ Eff[Unit],
@@ -117,6 +132,19 @@ object Service {
       persistCommand(in.command) *>
       persistDir(in.dir) *>
       persistArgs(in.command, in.options)
+  }
+
+  def getRecentCommands(getRecentCommands: Eff[List[CommandExecutionE]]) = {
+    val toOut = (it: CommandExecutionE) =>
+      CommandExecutionOut(
+        args = it.args.split(";;;").toList,
+        commandString = it.commandString,
+        dir = it.dir,
+        time = it.time.getTime()
+      )
+    for {
+      commands <- getRecentCommands
+    } yield commands.map(toOut)
   }
 
   def getTopCommands(getTopCommands: Eff[List[CommandE]]) =

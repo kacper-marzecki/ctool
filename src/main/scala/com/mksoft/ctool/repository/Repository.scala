@@ -143,4 +143,16 @@ object Repository {
       .query[String]
       .to[List]
       .transact(xa)
+
+  def getStoredCommandsQ(xa: Transactor[Eff]) = 
+    sql"select name, command_string, args, dir, uses from stored_command"
+     .query[StoredCommandE]
+      .to[List]
+      .transact(xa)
+
+  def getRecentCommandsQ(xa: Transactor[Eff]) = 
+    sql"select time, command_string, args, dir from command_execution limit 1000"
+    .query[CommandExecutionE]
+    .to[List]
+    .transact(xa)
 }

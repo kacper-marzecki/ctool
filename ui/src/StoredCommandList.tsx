@@ -1,10 +1,8 @@
 import { Button, Input, Tag } from "antd";
 import Table, { ColumnsType } from "antd/lib/table";
 import React, { ChangeEvent, useEffect, useState } from "react";
-import { compose } from "redux";
 import { StoredCommand } from "./model";
-import { store } from "./store";
-import { apiGet, notifyError, notifyErrorAnd, stateUpdateFn, stateUpdateFunctions } from "./utils";
+import { apiGet, notifyError, stateUpdateFunctions } from "./utils";
 
 interface State {
     commands: StoredCommand[],
@@ -20,8 +18,8 @@ export function StoredCommandList(props: { selectCommand: (command: StoredComman
     useEffect(() => {
         apiGet<StoredCommand[]>("command/stored")
             .then(updateStateAt("commands"))
-            .then(lazyUpdateStateAt("loading")(false))
-            .catch(notifyErrorAnd(lazyUpdateStateAt("loading")(false)))
+            .catch(notifyError)
+            .finally(lazyUpdateStateAt("loading")(false))
     }, [])
 
     const onSearchBoxInput = (e: ChangeEvent<HTMLInputElement>) => {

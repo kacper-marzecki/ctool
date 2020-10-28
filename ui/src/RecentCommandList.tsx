@@ -2,7 +2,7 @@ import { Tag, Button, Input, Table } from "antd";
 import { ColumnsType } from "antd/lib/table";
 import React, { ChangeEvent, useEffect, useState } from "react";
 import { StoredCommand } from "./model";
-import { stateUpdateFunctions, apiGet, notifyErrorAnd } from "./utils";
+import { stateUpdateFunctions, apiGet, notifyError } from "./utils";
 
 interface State {
     commands: StoredCommand[],
@@ -16,8 +16,8 @@ export function RecentCommandList(props: { selectCommand: (command: StoredComman
     useEffect(() => {
         apiGet<StoredCommand[]>("command/recent")
             .then(updateStateAt("commands"))
-            .then(lazyUpdateStateAt("loading")(false))
-            .catch(notifyErrorAnd(lazyUpdateStateAt("loading")(false)))
+            .catch(notifyError)
+            .finally(lazyUpdateStateAt("loading")(false))
     }, [])
 
     const onSearchBoxInput = (e: ChangeEvent<HTMLInputElement>) => {

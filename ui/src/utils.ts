@@ -105,9 +105,5 @@ export function stateUpdateFunctions<A>(
 }
 
 export const notifyError = (reason: any) => openNotification('error', prettyPrint(reason))
-export const notifyErrorAnd = (action: () => void) => (reason: any) => {
-  notifyError(reason)
-  action()
-}
 
 export const prettyPrint = (it: any) => JSON.stringify(it, null, ' ');

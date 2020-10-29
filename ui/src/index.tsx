@@ -14,10 +14,10 @@ import { notifyError } from "./utils";
 
 const render = () => {
   const App = require("./App").default;
-  let webSocket = new WebSocket("ws://localhost:8080/api/ws");
-  webSocket.onopen = () => notifyError("connected");
-  webSocket.onmessage = (message) =>
-    notifyError(`message received: ${message.data}`);
+  const source = new EventSource("http://localhost:8080/api/sse")
+  source.onopen = () => notifyError("connected");
+  source.onmessage = (message) => notifyError(`message received: ${message.data}`);
+
   ReactDOM.render(
     <React.StrictMode>
       <Provider store={store}>

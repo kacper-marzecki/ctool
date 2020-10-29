@@ -17,31 +17,16 @@ import zio.ZIO
 import ch.megard.akka.http.cors.scaladsl.CorsDirectives._
 import akka.http.scaladsl.server.RejectionHandler
 import akka.http.scaladsl.server.ExceptionHandler
-import com.mksoft.ctool.server.WebsocketRoutes
+import com.mksoft.ctool.server.SseRoutes
 
 object Server {
-  val s = Source.actorRef(
-    completionMatcher = {
-      case Done =>
-        // complete stream immediately if we send it Done
-        CompletionStrategy.immediately
-    },
-    // never fail the stream because of a message
-    failureMatcher = PartialFunction.empty,
-    bufferSize = 100,
-    overflowStrategy = OverflowStrategy.dropHead
-  )
-  // val a = s.to(Sink.foreach(println)).run()
   val rejectionHandler =
     corsRejectionHandler.withFallback(RejectionHandler.default)
 
-  // Your exception handler
   val exceptionHandler = ExceptionHandler {
-    case e: NoSuchElementException =>
-      complete(StatusCodes.NotFound -> e.getMessage)
+    case e => complete(StatusCodes.NotFound -> e.getMessage)
   }
 
-  // Combining the two handlers only for convenience
   val handleErrors =
     handleRejections(rejectionHandler) & handleExceptions(exceptionHandler)
 
@@ -49,31 +34,8 @@ object Server {
     handleErrors {
       cors() {
         pathPrefix("api") {
-          path("sse") {
-            import akka.http.scaladsl.marshalling.sse.EventStreamMarshalling._
-            import scala.concurrent.duration._
-            import java.time.format.DateTimeFormatter.ISO_LOCAL_TIME
-            get {
-              complete(
-                Source
-                  .tick(2.seconds, 2.seconds, NotUsed)
-                  .map(_ => LocalTime.now())
-                  .map(time => ServerSentEvent(ISO_LOCAL_TIME.format(time)))
-                  .keepAlive(20.second, () => ServerSentEvent.heartbeat)
-              )
-            }
-          } ~
-            CommandRoutes(compositionRoot) ~
-            WebsocketRoutes(compositionRoot) ~
-            get {
-              complete(
-                404,
-                HttpEntity(
-                  ContentTypes.`text/html(UTF-8)`,
-                  "<h1>Not Found</h1>"
-                )
-              )
-            }
+          CommandRoutes(compositionRoot) ~
+            SseRoutes(compositionRoot)
         } ~
           (get & pathPrefix("")) {
             (pathEndOrSingleSlash & redirectToTrailingSlashIfMissing(
@@ -83,7 +45,13 @@ object Server {
             } ~ {
               getFromResourceDirectory("webapp")
             }
-          } ~ complete(404, "Not Found")
+          } ~ complete(
+          404,
+          HttpEntity(
+            ContentTypes.`text/html(UTF-8)`,
+            "<h1>Not Found</h1>"
+          )
+        )
       }
     }
 

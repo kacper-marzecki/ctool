@@ -31,7 +31,7 @@ case class CompositionRoot() {
         PartialFunction.empty,
         PartialFunction.empty,
         5000,
-        OverflowStrategy.dropBuffer)
+        OverflowStrategy.dropTail)
     .preMaterialize()
   val uselessSink = wsSource.runWith(Sink.ignore)
   

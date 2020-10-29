@@ -135,10 +135,10 @@ object Service {
       saveStoredCommand(
         StoredCommandE(
           rowId = 0,
-          name = in.name,
-          commandString = in.command,
-          args = in.options.intercalate(";;;"),
-          dir = in.dir,
+          name = in.name.trim(),
+          commandString = in.command.trim(),
+          args = in.options.map(_.trim).filter(!_.isBlank()).intercalate(";;;"),
+          dir = in.dir.trim(),
           uses = 0
         )
       ) *>

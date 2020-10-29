@@ -17,6 +17,7 @@ import zio.ZIO
 import ch.megard.akka.http.cors.scaladsl.CorsDirectives._
 import akka.http.scaladsl.server.RejectionHandler
 import akka.http.scaladsl.server.ExceptionHandler
+import com.mksoft.ctool.server.WebsocketRoutes
 
 object Server {
   val s = Source.actorRef(
@@ -31,65 +32,71 @@ object Server {
     overflowStrategy = OverflowStrategy.dropHead
   )
   // val a = s.to(Sink.foreach(println)).run()
-    val rejectionHandler = corsRejectionHandler.withFallback(RejectionHandler.default)
+  val rejectionHandler =
+    corsRejectionHandler.withFallback(RejectionHandler.default)
 
-    // Your exception handler
-    val exceptionHandler = ExceptionHandler { case e: NoSuchElementException =>
+  // Your exception handler
+  val exceptionHandler = ExceptionHandler {
+    case e: NoSuchElementException =>
       complete(StatusCodes.NotFound -> e.getMessage)
-    }
+  }
 
-    // Combining the two handlers only for convenience
-    val handleErrors = handleRejections(rejectionHandler) & handleExceptions(exceptionHandler)
+  // Combining the two handlers only for convenience
+  val handleErrors =
+    handleRejections(rejectionHandler) & handleExceptions(exceptionHandler)
 
   def routes(compositionRoot: CompositionRoot) =
-   handleErrors {
+    handleErrors {
       cors() {
-      pathPrefix("api") {
-        path("sse") {
-          import akka.http.scaladsl.marshalling.sse.EventStreamMarshalling._
-          import scala.concurrent.duration._
-          import java.time.format.DateTimeFormatter.ISO_LOCAL_TIME
-          get {
-            complete(
-              Source
-                .tick(2.seconds, 2.seconds, NotUsed)
-                .map(_ => LocalTime.now())
-                .map(time => ServerSentEvent(ISO_LOCAL_TIME.format(time)))
-                .keepAlive(20.second, () => ServerSentEvent.heartbeat)
-            )
-          }
-        } ~
-          CommandRoutes(compositionRoot) ~
-          get {
-            complete(
-              404,
-              HttpEntity(
-                ContentTypes.`text/html(UTF-8)`,
-                "<h1>Not Found</h1>"
+        pathPrefix("api") {
+          path("sse") {
+            import akka.http.scaladsl.marshalling.sse.EventStreamMarshalling._
+            import scala.concurrent.duration._
+            import java.time.format.DateTimeFormatter.ISO_LOCAL_TIME
+            get {
+              complete(
+                Source
+                  .tick(2.seconds, 2.seconds, NotUsed)
+                  .map(_ => LocalTime.now())
+                  .map(time => ServerSentEvent(ISO_LOCAL_TIME.format(time)))
+                  .keepAlive(20.second, () => ServerSentEvent.heartbeat)
               )
-            )
-          }
-      } ~
-        (get & pathPrefix("")) {
-          (pathEndOrSingleSlash & redirectToTrailingSlashIfMissing(
-            StatusCodes.TemporaryRedirect
-          )) {
-            getFromResource("webapp/index.html")
-          } ~ {
-            getFromResourceDirectory("webapp")
-          }
-        }
+            }
+          } ~
+            CommandRoutes(compositionRoot) ~
+            WebsocketRoutes(compositionRoot) ~
+            get {
+              complete(
+                404,
+                HttpEntity(
+                  ContentTypes.`text/html(UTF-8)`,
+                  "<h1>Not Found</h1>"
+                )
+              )
+            }
+        } ~
+          (get & pathPrefix("")) {
+            (pathEndOrSingleSlash & redirectToTrailingSlashIfMissing(
+              StatusCodes.TemporaryRedirect
+            )) {
+              getFromResource("webapp/index.html")
+            } ~ {
+              getFromResourceDirectory("webapp")
+            }
+          } ~ complete(404, "Not Found")
+      }
     }
-   }
 
   def run(root: CompositionRoot): Eff[Nothing] = {
     ZIO
       .effect({
-        implicit val system = ActorSystem(Behaviors.empty, "ctool-system")
+        implicit val system = root.system
         ZIO
           .fromFuture(_ ⇒
             // TODO parameterize port binding
-            Http()(system).newServerAt("localhost", 8080).bind(routes(root))
+            Http()(root.system)
+              .newServerAt("localhost", 8080)
+              .bind(routes(root))
           )
           .flatMap(portBinding ⇒
             ZIO.never.onInterrupt(

@@ -15,6 +15,17 @@ import cats.data._
 import cats.implicits._
 
 object Service {
+  def executeStoredCommandAndStreamOutput(
+      executeCommand: (Int) => Eff[Model.CommandLineStream],
+      streamLine: (String) => Unit
+  )(commandId: Int): Eff[Unit] = {
+    for {
+      lineStream <- executeCommand(commandId)
+      _          <- putStrLn("executec succesfully")
+      _          <- lineStream.foreach(x => ZIO.effect(streamLine(x)))
+    } yield ()
+  }
+
   def persistUse(
       persistCommand: String ⇒ Eff[Unit],
       persistDir: String ⇒ Eff[Unit],
@@ -50,15 +61,15 @@ object Service {
     }
   }
 
-  def executeCommand(
+  def executeStoredCommand(
       executeExec: (Exec) ⇒ Eff[CommandLineStream],
-      getStoredCommand: (String) ⇒ Eff[StoredCommandE],
-      incrementStoredCommandUse: (String) ⇒ Eff[Unit]
-  )(commandName: String) = {
+      getStoredCommand: (Int) ⇒ Eff[StoredCommandE],
+      incrementStoredCommandUse: (Int) ⇒ Eff[Unit]
+  )(commandId: Int) = {
     for {
-      stored ← getStoredCommand(commandName)
+      stored ← getStoredCommand(commandId)
       stream ← executeExec(toExec(stored))
-      _      ← incrementStoredCommandUse(commandName)
+      _      ← incrementStoredCommandUse(commandId)
     } yield stream
   }
 
@@ -79,9 +90,9 @@ object Service {
   }
 
   def getStoredCommand(
-      getByName: (String) => Eff[Option[StoredCommandE]]
-  )(id: String) = {
-    getByName(id)
+      getById: (Int) => Eff[Option[StoredCommandE]]
+  )(id: Int) = {
+    getById(id)
       .flatMap(
         fromOption(_)
           .orElseFail(ex(s"Cannot Find Command with id: $id"))
@@ -91,6 +102,7 @@ object Service {
   def getStoredCommands(getStoredCommands: Eff[List[StoredCommandE]]) = {
     val toOut = (it: StoredCommandE) => {
       StoredCommandOut(
+        rowId = it.rowId,
         args = it.args.split(";;;").toList,
         commandString = it.commandString,
         dir = it.dir,
@@ -122,10 +134,11 @@ object Service {
     validation *>
       saveStoredCommand(
         StoredCommandE(
-          name = in.name,
-          commandString = in.command,
-          args = in.options.intercalate(";;;"),
-          dir = in.dir,
+          rowId = 0,
+          name = in.name.trim(),
+          commandString = in.command.trim(),
+          args = in.options.map(_.trim).filter(!_.isBlank()).intercalate(";;;"),
+          dir = in.dir.trim(),
           uses = 0
         )
       ) *>

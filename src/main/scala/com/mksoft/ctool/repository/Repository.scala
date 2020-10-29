@@ -68,9 +68,9 @@ object Repository {
   }
 
   def incrementStoredCommandUseQ(xa: Transactor[Eff])(
-      name: String
+      id: Int
   ): Eff[Unit] = {
-    sql"update stored_command set uses = uses + 1 where name= $name".update.run
+    sql"update stored_command set uses = uses + 1 where rowId = $id".update.run
       .transact(xa)
       .map(ignore)
 
@@ -120,8 +120,14 @@ object Repository {
       .map(ignore)
   }
 
-  def getCommandQ(xa: Transactor[Eff])(id: String) =
-    sql"select name, command_string, args, dir, uses from stored_command where name = $id"
+  def getCommandQ(xa: Transactor[Eff])(id: Int) =
+    sql"select rowId, name, command_string, args, dir, uses from stored_command where rowId = $id"
+      .query[StoredCommandE]
+      .option
+      .transact(xa)
+
+  def getCommandByNameQ(xa: Transactor[Eff])(name: String) =
+    sql"select name, command_string, args, dir, uses from stored_command where name = $name"
       .query[StoredCommandE]
       .option
       .transact(xa)
@@ -145,7 +151,7 @@ object Repository {
       .transact(xa)
 
   def getStoredCommandsQ(xa: Transactor[Eff]) = 
-    sql"select name, command_string, args, dir, uses from stored_command"
+    sql"select rowId, name, command_string, args, dir, uses from stored_command"
      .query[StoredCommandE]
       .to[List]
       .transact(xa)

@@ -27,7 +27,7 @@ object Main extends zio.App {
           })
       case ExecStored(command)   =>
         root
-          .executeCommand(command)
+          .executeStoredCommand(command)
           .flatMap(lines => {
             lines.foreach(putStrLn(_))
           })

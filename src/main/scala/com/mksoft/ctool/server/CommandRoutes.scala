@@ -36,12 +36,20 @@ object CommandRoutes {
           completeJson(compositionRoot.getRecentCommands)
         } ~
         (get & pathPrefix("stored")) {
-            completeJson(getStoredCommands)
+          completeJson(getStoredCommands)
         } ~
-        (post & pathEndOrSingleSlash) {
-          entity(as[SaveStoredCommandIn]) { it =>
-            completeJson(saveStoredCommand(it))
-          }
+        (post & pathPrefix("stored")) {
+          pathPrefix(IntNumber) { commandId =>
+            pathPrefix("execute") {
+              completeJson(executeStoredCommandAndStreamOutput(commandId))
+            }
+          } ~
+            pathEndOrSingleSlash {
+              entity(as[SaveStoredCommandIn]) { it =>
+                completeJson(saveStoredCommand(it))
+              }
+            }
+
         }
     }
   }

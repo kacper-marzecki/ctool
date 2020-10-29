@@ -17,7 +17,7 @@ sealed trait AppCommand;
 case class StartServer() extends AppCommand
 case class Exec(command: String, dir: String, args: List[String])
     extends AppCommand
-case class ExecStored(command: String)    extends AppCommand
+case class ExecStored(command: Int)    extends AppCommand
 case class ExecScala(commandName: String) extends AppCommand
 
 case class LogicError(msg: String) extends RuntimeException(msg)
@@ -35,6 +35,7 @@ case class CommandExecutionE(
 )
 
 case class StoredCommandE(
+    rowId: Int,
     name: String,
     commandString: String,
     args: String,
@@ -50,8 +51,16 @@ case class SaveStoredCommandIn(
     dir: String
 )
 
+case class ExecuteCommandIn(
+    commandString: String,
+    args: List[String],
+    dir: String
+)
+
+
 // Responses
 case class StoredCommandOut(
+    rowId: Int,
     name: String,
     commandString: String,
     args: List[String],

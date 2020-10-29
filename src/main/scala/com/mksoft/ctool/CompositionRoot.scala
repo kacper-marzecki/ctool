@@ -9,11 +9,32 @@ import zio.ZIO
 import io.circe.Encoder
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.model.StatusCodes._
-import io.circe._, io.circe.parser._, io.circe.syntax._
+import io.circe._
+import io.circe.parser._
+import io.circe.syntax._
 import Encoders._
-case class CompositionRoot() {
-  val xa = Repository.xa()
+import akka.actor.typed.ActorSystem
+import akka.actor.typed.scaladsl.Behaviors
+import akka.stream.scaladsl.Source
+import akka.http.scaladsl.model.ws.Message
+import akka.stream.{ActorMaterializer, CompletionStrategy, OverflowStrategy}
+import akka.stream.scaladsl.Flow
+import akka.stream.scaladsl.Sink
 
+import scala.concurrent.Future
+
+case class CompositionRoot() {
+  val xa              = Repository.xa()
+  implicit val system = ActorSystem(Behaviors.empty, "ctool-system")
+  val (wsActor, wsSource) = Source
+      .actorRef[String](
+        PartialFunction.empty,
+        PartialFunction.empty,
+        5000,
+        OverflowStrategy.dropBuffer)
+    .preMaterialize()
+  val uselessSink = wsSource.runWith(Sink.ignore)
+  
   val zioRuntime = zio.Runtime.default
 
   val getCurrentTime: Eff[Timestamp] = ZIO(
@@ -21,7 +42,7 @@ case class CompositionRoot() {
   )
 
   val getCommand =
-    Service.getStoredCommand(Repository.getCommandQ(xa))(_: String)
+    Service.getStoredCommand(Repository.getCommandQ(xa))(_: Int)
 
   val persistUse = Service.persistUse(
     persistCommand = Repository.persistCommandQ(xa)(_),
@@ -36,22 +57,34 @@ case class CompositionRoot() {
 
   val executeExec = Service.executeExec(persistUse)(_)
 
-  val executeCommand = Service.executeCommand(
+  val executeStoredCommand = Service.executeStoredCommand(
     executeExec,
     getCommand,
     Repository.incrementStoredCommandUseQ(xa)(_)
+  )(_)
+
+  val sendWsMsg = (s: String) => {
+    wsActor ! s
+    println(s)
+  }
+
+  val executeStoredCommandAndStreamOutput = Service.executeStoredCommandAndStreamOutput(
+    executeStoredCommand,
+    sendWsMsg
   )(_)
 
   val saveStoredCommand = Service.saveStoredCommand(
     persistCommand = Repository.persistCommandQ(xa)(_),
     persistDir = Repository.persistDirQ(xa)(_),
     persistArgs = Repository.persistArgsQ(xa)(_, _),
-    Repository.getCommandQ(xa),
+    Repository.getCommandByNameQ(xa),
     Repository.saveStoredCommandQ(xa)(_)
   )(_: SaveStoredCommandIn)
 
-  val getStoredCommands = Service.getStoredCommands(Repository.getStoredCommandsQ(xa))
-  val getRecentCommands: Eff[List[CommandExecutionOut]] = Service.getRecentCommands(Repository.getRecentCommandsQ(xa))
+  val getStoredCommands =
+    Service.getStoredCommands(Repository.getStoredCommandsQ(xa))
+  val getRecentCommands: Eff[List[CommandExecutionOut]] =
+    Service.getRecentCommands(Repository.getRecentCommandsQ(xa))
   val getTopCommands = Service.getTopCommands(Repository.getTopCommandsQ(xa))
   val getTopDirectories =
     Service.getTopDirectories(Repository.getTopDirectoriesQ(xa))

@@ -33,6 +33,7 @@ function App() {
         .with("calendar", _ => /* TODO */<h1>"Not implemented"</h1>)
         .run()
 
+
     return (
         <Layout style={{ minHeight: '100vh' }}>
             <Sider collapsible collapsed={state.collapsed} onCollapse={updateStateAt("collapsed")}>

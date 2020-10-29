@@ -14,7 +14,6 @@ interface State {
     dirs: { value: string }[],
     options: string[],
     newCommandName: string,
-    storedCommands: StoredCommand[]
     saveCommandOpen: boolean
 }
 
@@ -25,7 +24,6 @@ export function NewCommandForm() {
         dirs: [],
         options: [],
         newCommandName: "",
-        storedCommands: [],
         saveCommandOpen: false
     })
     const updateStateAt = stateUpdateFn(setState)
@@ -33,7 +31,7 @@ export function NewCommandForm() {
     const saveStoredCommand = () => {
         const data = { ...form.getFieldsValue(), name: state.newCommandName }
         console.log(JSON.stringify(data))
-        apiPost("command", data)
+        apiPost("command/stored", data)
             .catch(notifyError)
     }
 
@@ -45,9 +43,6 @@ export function NewCommandForm() {
         apiGet<string[]>("command/top-directories")
             .then(it => it.map(wrapInField("value")))
             .then(updateStateAt("dirs"))
-            .catch(notifyError)
-        apiGet<StoredCommand[]>("command/stored")
-            .then(updateStateAt("storedCommands"))
             .catch(notifyError)
     }, [])
 
@@ -121,7 +116,10 @@ export function NewCommandForm() {
             <Tabs.TabPane tab="Saved" key="1">
                 <StoredCommandList
                     selectCommand={setFormFromStoredCommand}
-                    executeCommand={(command) => notifyError(`command Executed: ${prettyPrint(command)}`)} />
+                    executeCommand={(command) => {
+                        apiPost(`command/stored/${command.rowId}/execute`, undefined)
+                        notifyError(`command Executed: ${prettyPrint(command)}`)
+                    }} />
             </Tabs.TabPane>
             <Tabs.TabPane tab="Recent" key="2">
                 <RecentCommandList
@@ -130,18 +128,18 @@ export function NewCommandForm() {
             </Tabs.TabPane>
         </Tabs>
 
-            <Modal
-                title="Save Command"
-                visible={state.saveCommandOpen}
-                onOk={() => { saveStoredCommand(); updateStateAt("saveCommandOpen")(false) }}
-                onCancel={() => updateStateAt("saveCommandOpen")(false)}
-                okText="Save"
-                cancelText="Cancel"
-            >
-                <Form.Item label="Command Name ">
-                    <Input value={state.newCommandName} onChange={updateNewCommandName} />
-                </Form.Item>
+        <Modal
+            title="Save Command"
+            visible={state.saveCommandOpen}
+            onOk={() => { saveStoredCommand(); updateStateAt("saveCommandOpen")(false) }}
+            onCancel={() => updateStateAt("saveCommandOpen")(false)}
+            okText="Save"
+            cancelText="Cancel"
+        >
+            <Form.Item label="Command Name ">
+                <Input value={state.newCommandName} onChange={updateNewCommandName} />
+            </Form.Item>
 
-            </Modal>
+        </Modal>
     </div >
 }

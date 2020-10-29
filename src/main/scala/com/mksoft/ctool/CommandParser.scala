@@ -30,8 +30,8 @@ object CommandParser {
     args match {
       case "server" :: Nil      => succeed(StartServer())
       case "raw" :: subCommands => parseExec(subCommands)
-      case "exec" :: procedureName :: Nil =>
-        succeed(ExecStored(procedureName))
+      case "exec" :: commandId :: Nil =>
+        succeed(ExecStored(commandId.toInt))
       case _ => failEx("Please specify a command to use")
     }
   }

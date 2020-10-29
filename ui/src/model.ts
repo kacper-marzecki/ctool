@@ -1,4 +1,5 @@
 export interface StoredCommand {
+    rowId: number,
     name: string,
     commandString: string,
     args: string[],

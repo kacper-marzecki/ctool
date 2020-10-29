@@ -6,13 +6,17 @@ import * as serviceWorker from './serviceWorker';
 import './index.css';
 import { ConfigProvider } from 'antd';
 import plPL from 'antd/es/locale/pl_PL';
-import {Provider} from 'react-redux';
-import {store} from './store';
+import { Provider } from 'react-redux';
+import { store } from './store';
 import 'antd/dist/antd.css';
+import { WSAEACCES } from 'constants';
+import { notifyError } from './utils';
 
 const render = () => {
     const App = require('./App').default
-
+    const webSocket = new WebSocket("ws://localhost:8080/api/ws");
+    webSocket.onopen = () => notifyError("connected")
+    webSocket.onmessage = (message) => notifyError(`message received: ${message.data}`)
     ReactDOM.render(
         <React.StrictMode>
             <Provider store={store}>

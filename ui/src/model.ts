@@ -15,6 +15,9 @@ export interface CommandExecution {
 }
 
 
+export type CommandExecutionMessage =
+    | {t: "CommandExecutionStarted", commandName: string, executionId: number}
+    | {t: "CommandLine", line: string, commandId: number}
 
 export type ApiResponse<T> =
     | { status: "success", content: T }

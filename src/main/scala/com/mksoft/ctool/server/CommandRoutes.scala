@@ -49,7 +49,6 @@ object CommandRoutes {
                 completeJson(saveStoredCommand(it))
               }
             }
-
         }
     }
   }

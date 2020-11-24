@@ -36,7 +36,6 @@ object Encoders {
 import com.mksoft.ctool.Model._
 
 object Utils {
-  import Encoders.apiResponseEncoder
   def ex(errorMsg: String)                       = new LogicError(errorMsg)
   def failEx[E](errorMsg: String): Task[Nothing] = zio.ZIO.fail(ex(errorMsg))
   val ignore                                     = (_: Any) => ()
@@ -47,10 +46,13 @@ object Utils {
       .fold[ApiResponse[String, A]](
         {
           case LogicError(msg) => ApiError(msg)
-          case _ @it =>
+          case other =>{
+            val ex = other
             InternalError(
-              it.getStackTrace().toList.map(_.toString).intercalate("\n")
+              (ex :: ex.getStackTrace.toList)
+              .map(_.toString).intercalate("\n")
             )
+          }
         },
         ApiSuccess(_)
       )

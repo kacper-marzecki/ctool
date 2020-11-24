@@ -43,7 +43,7 @@ export function StoredCommandList(props: { selectCommand: (command: StoredComman
             dataIndex: 'args',
             key: 'args',
             render: (_, command) => {
-                return command.args.map(it => <Tag>{it}</Tag>)
+                return command.args.map(it => <Tag key={it}>{it}</Tag>)
             }
         },
         {

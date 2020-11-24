@@ -7,7 +7,7 @@ import { useDispatch, useSelector, useStore } from "react-redux";
 import { AppDispatch, useApp, useAppState } from "./store";
 
 import { Button } from "antd";
-import { AppState, changePage, decrement, increment, RootState } from "./rootReducer";
+import {AppState, changePage, decrement, increment, RootState, sseEvent} from "./rootReducer";
 import { Layout, Menu, Breadcrumb } from 'antd';
 import {
     RocketOutlined,
@@ -17,6 +17,7 @@ import {
 import { CommandsView } from "./CommandsView";
 import { match } from 'ts-pattern';
 import {stateUpdateFn} from "./utils";
+import {createSseConnection} from "./sse";
 
 const { Header, Content, Footer, Sider } = Layout;
 const { SubMenu } = Menu;
@@ -27,6 +28,10 @@ function App() {
         collapsed: true,
     });
     const updateStateAt = stateUpdateFn(setState)
+
+    useEffect(()=> {
+        const sseSource = createSseConnection(m => dispatch(sseEvent(m)))
+    },[])
 
     const content = match(appState.selectedPage)
         .with("command", _ => <CommandsView />)

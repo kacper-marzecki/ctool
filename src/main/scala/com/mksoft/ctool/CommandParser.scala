@@ -2,6 +2,7 @@ package com.mksoft.ctool
 
 import java.io.File
 
+import akka.http.scaladsl.server.util.TupleOps.enhanceTuple
 import com.mksoft.ctool.Model.Eff
 import com.mksoft.ctool.Utils.failEx
 import zio.ZIO.succeed
@@ -37,7 +38,7 @@ object CommandParser {
   }
 
   def command(exec: Exec): Command = {
-    Command(exec.command, exec.args: _*)
+    Command("bash")
       .workingDirectory(new File(exec.dir))
   }
 }

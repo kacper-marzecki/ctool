@@ -4,19 +4,14 @@ import ReactDOM from "react-dom";
 import App from "./App";
 import * as serviceWorker from "./serviceWorker";
 import "./index.css";
-import { ConfigProvider } from "antd";
+import {ConfigProvider} from "antd";
 import plPL from "antd/es/locale/pl_PL";
-import { Provider } from "react-redux";
-import { store } from "./store";
+import {Provider} from "react-redux";
+import {store, useApp} from "./store";
 import "antd/dist/antd.css";
-import { WSAEACCES } from "constants";
-import { notifyError } from "./utils";
 
 const render = () => {
   const App = require("./App").default;
-  const source = new EventSource("http://localhost:8080/api/sse")
-  source.onopen = () => notifyError("connected");
-  source.onmessage = (message) => notifyError(`message received: ${message.data}`);
 
   ReactDOM.render(
     <React.StrictMode>

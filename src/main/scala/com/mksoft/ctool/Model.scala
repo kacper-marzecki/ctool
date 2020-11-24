@@ -10,7 +10,7 @@ import zio.stream.ZStream
 object Model {
   type Result[+L, +R]    = ZIO[ZEnv, L, R]
   type Eff[+A]           = Result[Throwable, A]
-  type CommandLineStream = ZStream[Blocking, CommandError, String]
+  type CommandLineStream = ZStream[Blocking, Throwable, String]
 }
 
 sealed trait AppCommand;
@@ -73,6 +73,12 @@ case class CommandExecutionOut(
     args: List[String],
     dir: String
 )
+
+sealed trait CommandExecutionMessage
+
+case class CommandExecutionStarted(commandName: String, executionId: Long) extends CommandExecutionMessage
+case class CommandLine(commandId: Long, line: String) extends CommandExecutionMessage
+
 
 sealed trait ApiResponse[+E, +A]
 case class ApiSuccess[+E, +A](content: A, status: String = "success")

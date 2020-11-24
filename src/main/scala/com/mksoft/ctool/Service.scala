@@ -1,28 +1,36 @@
 package com.mksoft.ctool
 
+import java.io.{File, InputStream}
 import java.sql.Timestamp
 
 import com.mksoft.ctool.Model.{CommandLineStream, Eff}
-import com.mksoft.ctool.Utils.ex
+import com.mksoft.ctool.Utils.{ex, ignore}
 import zio._
 import zio.interop.catz._
 import zio.ZIO._
 import zio.blocking.Blocking
 import zio.console._
-import zio.process.CommandError
+import zio.process.{Command, CommandError, ProcessInput}
 import zio.stream.ZStream
 import cats.data._
 import cats.implicits._
 
 object Service {
   def executeStoredCommandAndStreamOutput(
-      executeCommand: (Int) => Eff[Model.CommandLineStream],
-      streamLine: (String) => Unit
+      executeCommand: Int => Eff[Model.CommandLineStream],
+      streamLine: CommandExecutionMessage => Eff[Unit],
+      getStoredCommand: Int ⇒ Eff[StoredCommandE],
+      currentTime: Eff[Timestamp]
   )(commandId: Int): Eff[Unit] = {
     for {
-      lineStream <- executeCommand(commandId)
-      _          <- putStrLn("executec succesfully")
-      _          <- lineStream.foreach(x => ZIO.effect(streamLine(x)))
+      command     <- getStoredCommand(commandId)
+      executionId <- currentTime.map(_.getTime)
+      _           <- streamLine(CommandExecutionStarted(command.name, executionId))
+      lineStream  <- executeCommand(commandId)
+      s <-
+        lineStream. foreach(line => {
+          streamLine(CommandLine(executionId, line))
+        }).forkDaemon
     } yield ()
   }
 
@@ -60,7 +68,7 @@ object Service {
       case _ ⇒ Utils.failEx(s"No scala command found with name $commandName")
     }
   }
-
+import scala.sys.process._
   def executeStoredCommand(
       executeExec: (Exec) ⇒ Eff[CommandLineStream],
       getStoredCommand: (Int) ⇒ Eff[StoredCommandE],
@@ -68,30 +76,40 @@ object Service {
   )(commandId: Int) = {
     for {
       stored ← getStoredCommand(commandId)
-      stream ← executeExec(toExec(stored))
+      exec= toExec(stored)
+//      lines = s"${exec.command}".lazyLines
+      stream ← executeExec(exec)
       _      ← incrementStoredCommandUse(commandId)
     } yield stream
   }
-
+import cats.implicits._
   def executeExec(persistUse: (Exec) ⇒ Eff[Unit])(
       exec: Exec
   ): Eff[CommandLineStream] = {
-    val command = CommandParser
-      .command(exec)
-      .run
-      .bimap(
-        _.getCause,
-        { res ⇒ res.stderr.linesStream.concat(res.stdout.linesStream) }
-      )
-    for {
-      stream ← command
-      _      ← persistUse(exec)
-    } yield stream
+    val c = s"""PATH=/home/omnissiah/.nvm/versions/node/v14.14.0/bin:/home/omnissiah/.sdkman/candidates/scala/current/bin:/home/omnissiah/.sdkman/candidates/sbt/current/bin:/home/omnissiah/.sdkman/candidates/java/current/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin  && ${exec.command} ${exec.args.intercalate(" ")}"""
+
+//    WORKS
+//    println(s"""/bin/sh -c  "${c}"""")
+//    ZIO.succeed(ZStream.fromIteratorEffect(ZIO.effect(s"""/bin/bash -c  "${c}" """.lazyLines_!.iterator)))
+    Command("/bin/bash" , "-c", c)
+      .workingDirectory(new File(exec.dir))
+           .run
+          .bimap(
+            _.getCause,
+            { res ⇒ res.stdout.linesStream.merge(res.stderr.linesStream) }
+          )
+//    for {
+//    cq <- ZQueue.unbounded[String]
+//     logger = ProcessLogger(cq.)
+//    stream = ZStream.fromChunkQueue(cq.map(Chunk.single))
+//    } yield stream
   }
 
   def getStoredCommand(
       getById: (Int) => Eff[Option[StoredCommandE]]
   )(id: Int) = {
+    val  a = Chain(1).toList
+    val c = a.map(_ + 2)
     getById(id)
       .flatMap(
         fromOption(_)
@@ -124,11 +142,13 @@ object Service {
   )(in: SaveStoredCommandIn): Eff[Unit] = {
     val validation = for {
       maybeStoredCommand <- getByName(in.name)
-      exists = !maybeStoredCommand.isEmpty
+      exists = maybeStoredCommand.isDefined
       _ <-
         if (exists) {
           Utils.failEx(s"Command with name ${in.name} already Exists")
-        } else { ZIO.succeed(()) }
+        } else {
+          ZIO.succeed(())
+        }
     } yield ()
 
     validation *>
@@ -137,7 +157,7 @@ object Service {
           rowId = 0,
           name = in.name.trim(),
           commandString = in.command.trim(),
-          args = in.options.map(_.trim).filter(!_.isBlank()).intercalate(";;;"),
+          args = in.options.map(_.trim).filter(!_.isBlank).intercalate(";;;"),
           dir = in.dir.trim(),
           uses = 0
         )
@@ -178,5 +198,5 @@ object Service {
     } yield args
 
   def toExec(s: StoredCommandE) =
-    Exec(s.commandString, s.dir, s.args.split(";;;").toList)
+    Exec(s.commandString, s.dir, s.args.split(";;;").filter(_.nonEmpty).toList)
 }

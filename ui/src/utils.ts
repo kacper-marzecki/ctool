@@ -60,7 +60,7 @@ export function wrapInField<K extends keyof any, T>(fieldName: K): (value: T) =>
 const openNotification = (type: keyof NotificationInstance, msg: string) => {
   notification[type]({
     duration: 2,
-    message: 'Error',
+    message: type,
     description: msg
   });
 };
@@ -105,5 +105,7 @@ export function stateUpdateFunctions<A>(
 }
 
 export const notifyError = (reason: any) => openNotification('error', prettyPrint(reason))
+
+export const notifyInfo = (reason: any) => openNotification('info', prettyPrint(reason))
 
 export const prettyPrint = (it: any) => JSON.stringify(it, null, ' ');
